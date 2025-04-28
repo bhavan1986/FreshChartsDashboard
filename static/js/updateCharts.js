@@ -191,7 +191,7 @@ async function fetchDataAndUpdateCharts() {
                             },
                             drag: {
                                 enabled: true,
-                                modifierKey: 'shift',
+                                //modifierKey: 'shift',
                                 backgroundColor: 'rgba(0,0,0,0.1)',
                                 borderColor: 'rgba(0,0,0,0.5)',
                                 borderWidth: 1
