@@ -4,7 +4,11 @@ import pandas as pd
 app = Flask(__name__)
 
 def load_excel_data():
-    xl = pd.ExcelFile('Data1.xlsx', engine='openpyxl')
+    import os
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(BASE_DIR, 'Data1.xlsx')
+
+    xl = pd.ExcelFile(file_path, engine='openpyxl')
 
     chart_data = {}
 
@@ -12,23 +16,33 @@ def load_excel_data():
         df = xl.parse(sheet_name)
 
         if df.shape[1] >= 4:
-            x = df.iloc[:, 0].tolist()  # DO NOT dropna
+            x = df.iloc[:, 0].tolist()
             y1 = df.iloc[:, 1].tolist()
             y2 = df.iloc[:, 2].tolist()
             y3 = df.iloc[:, 3].tolist()
 
-            # Read N1:P3
+            # Now safely clean: keep rows where x is not NaN
+            clean_x, clean_y1, clean_y2, clean_y3 = [], [], [], []
+            for xi, yi1, yi2, yi3 in zip(x, y1, y2, y3):
+                if pd.notnull(xi):
+                    clean_x.append(xi)
+                    clean_y1.append(yi1 if pd.notnull(yi1) else None)
+                    clean_y2.append(yi2 if pd.notnull(yi2) else None)
+                    clean_y3.append(yi3 if pd.notnull(yi3) else None)
+
+            # Read N1:P3 safely
             n1p3 = df.iloc[0:3, 13:16].fillna("").values.tolist()
 
             chart_data[sheet_name] = {
-                'x': x,
-                'y1': y1,
-                'y2': y2,
-                'y3': y3,
+                'x': clean_x,
+                'y1': clean_y1,
+                'y2': clean_y2,
+                'y3': clean_y3,
                 'n1p3': n1p3
             }
 
     return chart_data
+
 
 
 @app.route('/')
