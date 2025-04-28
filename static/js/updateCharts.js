@@ -203,6 +203,18 @@ async function fetchDataAndUpdateCharts() {
     tooltip: {
         mode: 'nearest',
         intersect: false
+		callbacks: {
+        label: function(context) {
+            let label = context.dataset.label || '';
+            if (label) {
+                label += ': ';
+            }
+            if (context.parsed.y !== null) {
+                label += (context.parsed.y * 100).toFixed(2) + '%';
+            }
+            return label;
+        }
+    }
     }
 }
             }
