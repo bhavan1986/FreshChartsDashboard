@@ -192,6 +192,9 @@ async function fetchDataAndUpdateCharts() {
             mode: 'x',  // Only horizontal panning
 			overScaleMode: 'x', // (important, allows to move freely)
             //modifierKey: 'ctrl'  // Pan only when Ctrl pressed (optional professional)
+			wheel: {
+                enabled: true
+            }
         },
         },
     legend: {
