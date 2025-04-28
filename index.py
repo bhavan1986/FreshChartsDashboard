@@ -4,7 +4,7 @@ import pandas as pd
 app = Flask(__name__)
 
 def load_excel_data():
-    xl = pd.ExcelFile('Data1.xlsx', engine='openpyxl')  # 📌 Hardcoded local file
+    xl = pd.ExcelFile('Data1.xlsx', engine='openpyxl')
 
     chart_data = {}
 
@@ -12,10 +12,10 @@ def load_excel_data():
         df = xl.parse(sheet_name)
 
         if df.shape[1] >= 4:
-            x = df.iloc[:, 0].dropna().tolist()
-            y1 = df.iloc[:, 1].dropna().tolist()
-            y2 = df.iloc[:, 2].dropna().tolist()
-            y3 = df.iloc[:, 3].dropna().tolist()
+            x = df.iloc[:, 0].tolist()  # DO NOT dropna
+            y1 = df.iloc[:, 1].tolist()
+            y2 = df.iloc[:, 2].tolist()
+            y3 = df.iloc[:, 3].tolist()
 
             # Read N1:P3
             n1p3 = df.iloc[0:3, 13:16].fillna("").values.tolist()
@@ -29,6 +29,7 @@ def load_excel_data():
             }
 
     return chart_data
+
 
 @app.route('/')
 def index():
