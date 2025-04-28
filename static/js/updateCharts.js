@@ -2,6 +2,8 @@ let charts = {};
 let currentZoomState = {};
 
 async function fetchDataAndUpdateCharts() {
+    const scrollPos = window.scrollY; // 🆕 Save scroll position early
+
     const response = await fetch('/data');
     const data = await response.json();
 
@@ -25,7 +27,7 @@ async function fetchDataAndUpdateCharts() {
         chartDiv.className = 'chart-container';
         chartDiv.id = chartId;
 
-        // Insert Sheet Title
+        // Sheet Title
         const sheetTitle = document.createElement('div');
         sheetTitle.className = 'sheet-title';
         sheetTitle.innerHTML = `<b>${sheetName}</b>`;
@@ -41,7 +43,7 @@ async function fetchDataAndUpdateCharts() {
         const canvas = document.createElement('canvas');
         chartDiv.appendChild(canvas);
 
-        // Add double-click event to reset zoom
+        // Double-click to reset zoom
         canvas.addEventListener('dblclick', function() {
             if (charts[chartId]) {
                 charts[chartId].resetZoom();
@@ -117,7 +119,7 @@ async function fetchDataAndUpdateCharts() {
                             text: 'T - '
                         },
                         ticks: {
-                            callback: function(value, index, ticks) {
+                            callback: function(value) {
                                 return this.getLabelForValue(value);
                             },
                             autoSkip: false
@@ -178,23 +180,22 @@ async function fetchDataAndUpdateCharts() {
                             mode: 'x',
                             overScaleMode: 'x',
                             wheel: {
-                                enabled: true
-                            }
+                                enabled: true,
+                            },
                         },
                         zoom: {
                             wheel: {
                                 enabled: true,
-                                modifierKey: 'ctrl'
+                                modifierKey: 'ctrl',
                             },
                             pinch: {
-                                enabled: true
+                                enabled: true,
                             },
                             drag: {
                                 enabled: true,
-                                //modifierKey: 'shift',
                                 backgroundColor: 'rgba(0,0,0,0.1)',
                                 borderColor: 'rgba(0,0,0,0.5)',
-                                borderWidth: 1
+                                borderWidth: 1,
                             },
                             mode: 'x'
                         }
@@ -221,7 +222,13 @@ async function fetchDataAndUpdateCharts() {
                 }
             }
         });
-    }
+    } // 🛑 End of for-loop
+
+    // 🆕 AFTER all charts created, restore zooms
+    restoreAllZoomStates();
+
+    // 🆕 THEN restore scroll
+    window.scrollTo(0, scrollPos);
 }
 
 // Save zoom states before refresh
@@ -233,7 +240,6 @@ function saveAllZoomStates() {
             max: chart.scales.x.max
         };
     }
-    // Save scroll position
     currentZoomState['scrollPos'] = window.scrollY;
 }
 
@@ -247,9 +253,6 @@ function restoreAllZoomStates() {
             chart.update();
         }
     }
-    if (currentZoomState['scrollPos'] !== undefined) {
-        window.scrollTo(0, currentZoomState['scrollPos']);
-    }
 }
 
 // Initial load
@@ -259,5 +262,4 @@ fetchDataAndUpdateCharts();
 setInterval(async () => {
     saveAllZoomStates();
     await fetchDataAndUpdateCharts();
-    restoreAllZoomStates();
 }, 300000);
