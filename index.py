@@ -1,14 +1,23 @@
 from flask import Flask, render_template, jsonify
 import pandas as pd
+import requests
+import io
 
 app = Flask(__name__)
 
 def load_excel_data():
-    import os
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(BASE_DIR, 'Data1.xlsx')
+    # 📂 Dropbox direct download link
+    file_url = 'https://www.dropbox.com/scl/fi/rpye8jwg1v97bkw8emaor/Trades_Charts.xlsm?rlkey=wsdy4ikza4vtipojoqlmvys4u&st=8jrjwogn&dl=1'
 
-    xl = pd.ExcelFile(file_path, engine='openpyxl')
+    # 📥 Download the file
+    response = requests.get(file_url)
+    if response.status_code != 200:
+        raise Exception(f"Failed to download the Excel file. Status Code: {response.status_code}")
+
+    excel_data = response.content
+
+    # 📄 Read Excel from bytes
+    xl = pd.ExcelFile(io.BytesIO(excel_data), engine='openpyxl')
 
     chart_data = {}
 
@@ -21,7 +30,7 @@ def load_excel_data():
             y2 = df.iloc[:, 2].tolist()
             y3 = df.iloc[:, 3].tolist()
 
-            # Now safely clean: keep rows where x is not NaN
+            # ✅ Keep rows aligned, skip if x is NaN
             clean_x, clean_y1, clean_y2, clean_y3 = [], [], [], []
             for xi, yi1, yi2, yi3 in zip(x, y1, y2, y3):
                 if pd.notnull(xi):
@@ -30,7 +39,7 @@ def load_excel_data():
                     clean_y2.append(yi2 if pd.notnull(yi2) else None)
                     clean_y3.append(yi3 if pd.notnull(yi3) else None)
 
-            # Read N1:P3 safely
+            # 📚 Read N1:P3 info safely
             n1p3 = df.iloc[0:3, 13:16].fillna("").values.tolist()
 
             chart_data[sheet_name] = {
@@ -43,8 +52,6 @@ def load_excel_data():
 
     return chart_data
 
-
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -54,6 +61,6 @@ def data():
     chart_data = load_excel_data()
     return jsonify(chart_data)
 
-# 🆕 Important for Vercel/Render:
+# 🆕 Important for Render:
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

@@ -206,6 +206,8 @@ function saveAllZoomStates() {
             max: chart.scales.x.max
         };
     }
+	// ✅ Save current scroll position
+    currentZoomState['scrollPos'] = window.scrollY;
 }
 
 // Restore zoom states after refresh
@@ -217,6 +219,10 @@ function restoreAllZoomStates() {
             chart.options.scales.x.max = currentZoomState[chartId].max;
             chart.update();
         }
+    }
+	 // ✅ Restore scroll position
+    if (currentZoomState['scrollPos'] !== undefined) {
+        window.scrollTo(0, currentZoomState['scrollPos']);
     }
 }
 
