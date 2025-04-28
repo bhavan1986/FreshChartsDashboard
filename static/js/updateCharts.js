@@ -179,7 +179,7 @@ async function fetchDataAndUpdateCharts() {
 				modifierKey: 'ctrl'  // Pan only when Ctrl pressed (optional professional)
             },
             pinch: {
-                enabled: true
+                enabled: true,
             },
             drag: {
                 enabled: true,
@@ -193,7 +193,7 @@ async function fetchDataAndUpdateCharts() {
 			overScaleMode: 'x', // (important, allows to move freely)
             //modifierKey: 'ctrl'  // Pan only when Ctrl pressed (optional professional)
 			wheel: {
-                enabled: true
+                enabled: true,
             }
         },
         },
