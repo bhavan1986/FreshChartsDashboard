@@ -165,34 +165,37 @@ async function fetchDataAndUpdateCharts() {
 					}
 				},
                 plugins: {
-						zoom: {
-							zoom: {
-                            wheel: { enabled: true },
-                            pinch: { enabled: true },
-                            mode: 'x'
-                        },
-								drag: {
-									enabled: true,
-									},
-								mode: 'x'  // Only allow horizontal zoom
-							},
-							pan: {
-								enabled: true,
-								mode: 'x',  // Only horizontal panning
-								modifierKey: 'ctrl'  // Pan only when Ctrl pressed (optional professional)
-							},
-							onDblClick: function(chart) {
-								chart.resetZoom();
-							}
-						},
-						legend: {
-							position: 'top'
-						},
-						tooltip: {
-							mode: 'nearest',
-							intersect: false
-						}
-					}
+    zoom: {
+        zoom: {
+            wheel: {
+                enabled: true
+            },
+            pinch: {
+                enabled: true
+            },
+            drag: {
+                enabled: true,
+                //modifierKey: 'shift' // (optional) Only drag if SHIFT pressed
+            },
+            mode: 'x'  // Only allow horizontal zoom
+        },
+        pan: {
+            enabled: true,
+            mode: 'x',  // Only horizontal panning
+            modifierKey: 'ctrl'  // Pan only when Ctrl pressed (optional professional)
+        },
+        onDblClick: function(chart) {
+            chart.resetZoom();
+        }
+    },
+    legend: {
+        position: 'top'
+    },
+    tooltip: {
+        mode: 'nearest',
+        intersect: false
+    }
+}
             }
         });
 
