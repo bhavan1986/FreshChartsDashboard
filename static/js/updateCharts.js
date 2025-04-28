@@ -41,6 +41,13 @@ async function fetchDataAndUpdateCharts() {
         const canvas = document.createElement('canvas');
         chartDiv.appendChild(canvas);
 
+		// 🆕 Add double-click event to reset zoom
+		canvas.addEventListener('dblclick', function() {
+		if (charts[chartId]) {
+        charts[chartId].resetZoom();
+		}
+		});
+
         // Reset Zoom button
         const resetBtn = document.createElement('button');
         resetBtn.className = 'reset-zoom-btn';
@@ -169,6 +176,7 @@ async function fetchDataAndUpdateCharts() {
         zoom: {
             wheel: {
                 enabled: true
+				modifierKey: 'ctrl'  // Pan only when Ctrl pressed (optional professional)
             },
             pinch: {
                 enabled: true
@@ -182,7 +190,8 @@ async function fetchDataAndUpdateCharts() {
         pan: {
             enabled: true,
             mode: 'x',  // Only horizontal panning
-            modifierKey: 'ctrl'  // Pan only when Ctrl pressed (optional professional)
+			overScaleMode: 'x', // (important, allows to move freely)
+            //modifierKey: 'ctrl'  // Pan only when Ctrl pressed (optional professional)
         },
         onDblClick: function(chart) {
             chart.resetZoom();
