@@ -13,7 +13,7 @@ async function fetchDataAndUpdateCharts() {
 
     for (let sheetName in data) {
         const chartId = 'chart_' + sheetName.replace(/\s+/g, '_');
-        
+
         // Sidebar link
         const link = document.createElement('a');
         link.href = '#' + chartId;
@@ -24,12 +24,12 @@ async function fetchDataAndUpdateCharts() {
         const chartDiv = document.createElement('div');
         chartDiv.className = 'chart-container';
         chartDiv.id = chartId;
-        
-		// 🆕 Insert Sheet Title
-		const sheetTitle = document.createElement('div');
-		sheetTitle.className = 'sheet-title';
-		sheetTitle.innerHTML = `<b>${sheetName}</b>`;
-		chartDiv.appendChild(sheetTitle);
+
+        // Insert Sheet Title
+        const sheetTitle = document.createElement('div');
+        sheetTitle.className = 'sheet-title';
+        sheetTitle.innerHTML = `<b>${sheetName}</b>`;
+        chartDiv.appendChild(sheetTitle);
 
         // N1:P3 Box
         const n1p3Div = document.createElement('div');
@@ -41,12 +41,12 @@ async function fetchDataAndUpdateCharts() {
         const canvas = document.createElement('canvas');
         chartDiv.appendChild(canvas);
 
-		// 🆕 Add double-click event to reset zoom
-		canvas.addEventListener('dblclick', function() {
-		if (charts[chartId]) {
-        charts[chartId].resetZoom();
-		}
-		});
+        // Add double-click event to reset zoom
+        canvas.addEventListener('dblclick', function() {
+            if (charts[chartId]) {
+                charts[chartId].resetZoom();
+            }
+        });
 
         // Reset Zoom button
         const resetBtn = document.createElement('button');
@@ -111,121 +111,116 @@ async function fetchDataAndUpdateCharts() {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-					x: {
-						title: {
-							display: true,
-							text: 'T - '
-						},
-						ticks: {
-							callback: function(value, index, ticks) {
-								return this.getLabelForValue(value);
-							},
-							autoSkip: false
-						}
-					},
-					y1: {
-						type: 'linear',
-						min: paddedMinY,
-						max: paddedMaxY,
-						position: 'left',
-						title: {
-							display: true,
-							text: 'P/L % | Stock Move %'
-						},
-						ticks: {
-							callback: function(value) {
-								return (value * 100).toFixed(2) + '%';
-							}
-						},
-						grid: {
-							color: function(context) {
-								if (context.tick.value === 0) {
-									return 'black';  // 0 line black
-								}
-								return 'rgba(0,0,0,0.1)'; // other lines very light
-							},
-							lineWidth: function(context) {
-								if (context.tick.value === 0) {
-									return 2;  // 0 line thicker
-								}
-								return 1;  // others thin
-							}
-						}
-					},
-					y2: {
-						type: 'linear',
-						min: paddedMinY,
-						max: paddedMaxY,
-						position: 'right',
-						grid: {
-							drawOnChartArea: false
-						},
-						title: {
-							display: true,
-							text: 'Daily RV Drop %'
-						},
-						ticks: {
-							callback: function(value) {
-								return (value * 100).toFixed(2) + '%';
-							}
-						}
-					}
-				},
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'T - '
+                        },
+                        ticks: {
+                            callback: function(value, index, ticks) {
+                                return this.getLabelForValue(value);
+                            },
+                            autoSkip: false
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        min: paddedMinY,
+                        max: paddedMaxY,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'P/L % | Stock Move %'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return (value * 100).toFixed(2) + '%';
+                            }
+                        },
+                        grid: {
+                            color: function(context) {
+                                if (context.tick.value === 0) {
+                                    return 'black';
+                                }
+                                return 'rgba(0,0,0,0.1)';
+                            },
+                            lineWidth: function(context) {
+                                if (context.tick.value === 0) {
+                                    return 2;
+                                }
+                                return 1;
+                            }
+                        }
+                    },
+                    y2: {
+                        type: 'linear',
+                        min: paddedMinY,
+                        max: paddedMaxY,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Daily RV Drop %'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return (value * 100).toFixed(2) + '%';
+                            }
+                        }
+                    }
+                },
                 plugins: {
-    zoom: {
-        zoom: {
-            wheel: {
-                enabled: true,
-				modifierKey: 'ctrl'  // Pan only when Ctrl pressed (optional professional)
-            },
-            pinch: {
-                enabled: true,
-            },
-            drag: {
-                enabled: true,
-                //modifierKey: 'shift' // (optional) Only drag if SHIFT pressed
-            },
-            mode: 'x'  // Only allow horizontal zoom
-        },
-        pan: {
-            enabled: true,
-            mode: 'x',  // Only horizontal panning
-			overScaleMode: 'x', // (important, allows to move freely)
-            //modifierKey: 'ctrl'  // Pan only when Ctrl pressed (optional professional)
-			wheel: {
-                enabled: true,
-            }
-        },
-        },
-    legend: {
-        position: 'top'
-    },
-    tooltip: {
-        mode: 'nearest',
-        intersect: false
-		callbacks: {
-        label: function(context) {
-            let label = context.dataset.label || '';
-            if (label) {
-                label += ': ';
-            }
-            if (context.parsed.y !== null) {
-                label += (context.parsed.y * 100).toFixed(2) + '%';
-            }
-            return label;
-        }
-    }
-    }
-}
+                    zoom: {
+                        pan: {
+                            enabled: true,
+                            mode: 'x',
+                            overScaleMode: 'x',
+                            wheel: {
+                                enabled: true
+                            }
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                                modifierKey: 'ctrl'
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            drag: {
+                                enabled: true,
+                                modifierKey: 'shift',
+                                backgroundColor: 'rgba(0,0,0,0.1)',
+                                borderColor: 'rgba(0,0,0,0.5)',
+                                borderWidth: 1
+                            },
+                            mode: 'x'
+                        }
+                    },
+                    legend: {
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'nearest',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += (context.parsed.y * 100).toFixed(2) + '%';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
             }
         });
-
-        // Auto-zoom to last 200 points
-        //if (xLabels.length > 200) {
-            //const zoomMin = xLabels[xLabels.length - 200];
-            //const zoomMax = xLabels[xLabels.length - 1];
-            //charts[chartId].zoomScale('x', {min: zoomMin, max: zoomMax});
-        //}
     }
 }
 
@@ -238,7 +233,7 @@ function saveAllZoomStates() {
             max: chart.scales.x.max
         };
     }
-	// ✅ Save current scroll position
+    // Save scroll position
     currentZoomState['scrollPos'] = window.scrollY;
 }
 
@@ -252,7 +247,6 @@ function restoreAllZoomStates() {
             chart.update();
         }
     }
-	 // ✅ Restore scroll position
     if (currentZoomState['scrollPos'] !== undefined) {
         window.scrollTo(0, currentZoomState['scrollPos']);
     }
