@@ -175,7 +175,7 @@ async function fetchDataAndUpdateCharts() {
     zoom: {
         zoom: {
             wheel: {
-                enabled: true
+                enabled: true,
 				modifierKey: 'ctrl'  // Pan only when Ctrl pressed (optional professional)
             },
             pinch: {
@@ -193,10 +193,7 @@ async function fetchDataAndUpdateCharts() {
 			overScaleMode: 'x', // (important, allows to move freely)
             //modifierKey: 'ctrl'  // Pan only when Ctrl pressed (optional professional)
         },
-        onDblClick: function(chart) {
-            chart.resetZoom();
-        }
-    },
+        },
     legend: {
         position: 'top'
     },
