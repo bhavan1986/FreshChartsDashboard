@@ -5,7 +5,8 @@ app = Flask(__name__)
 
 def load_excel_data():
     # 📄 Load Excel directly from local file
-    file_path = "Trades_Charts.xlsm"
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(BASE_DIR, "Trades_Charts.xlsm")
 
     xl = pd.ExcelFile(file_path, engine='openpyxl')
 
