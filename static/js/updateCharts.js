@@ -2,7 +2,7 @@ let charts = {};
 let currentZoomState = {};
 
 async function fetchDataAndUpdateCharts() {
-    const scrollPos = window.scrollY; // 🆕 Save scroll position early
+    const scrollPos = window.scrollY; // Save scroll position early
 
     const response = await fetch('/data');
     const data = await response.json();
@@ -206,7 +206,7 @@ async function fetchDataAndUpdateCharts() {
                     tooltip: {
                         mode: 'index',
                         intersect: false,
-						axis:'x',
+                        axis: 'x',
                         callbacks: {
                             label: function(context) {
                                 let label = context.dataset.label || '';
@@ -218,17 +218,94 @@ async function fetchDataAndUpdateCharts() {
                                 }
                                 return label;
                             }
+                        },
+                        // Add the vertical line on hover
+                        external: function(context) {
+                            // Get tooltip element
+                            const tooltipEl = document.getElementById('chartjs-tooltip');
+                            
+                            // Hide if no tooltip
+                            const tooltipModel = context.tooltip;
+                            if (tooltipModel.opacity === 0) {
+                                if (tooltipEl) {
+                                    tooltipEl.style.opacity = 0;
+                                }
+                                
+                                // Remove vertical line if exists
+                                const verticalLine = document.getElementById('chartjs-vertical-line');
+                                if (verticalLine) {
+                                    verticalLine.style.opacity = 0;
+                                }
+                                
+                                return;
+                            }
+
+                            // Set caret Position
+                            tooltipEl.classList.remove('above', 'below', 'no-transform');
+                            if (tooltipModel.yAlign) {
+                                tooltipEl.classList.add(tooltipModel.yAlign);
+                            } else {
+                                tooltipEl.classList.add('no-transform');
+                            }
+
+                            // Create or update vertical line
+                            let verticalLine = document.getElementById('chartjs-vertical-line');
+                            const chart = context.chart;
+                            const xPosition = tooltipModel.caretX;
+                            
+                            if (!verticalLine) {
+                                verticalLine = document.createElement('div');
+                                verticalLine.id = 'chartjs-vertical-line';
+                                verticalLine.style.position = 'absolute';
+                                verticalLine.style.pointerEvents = 'none';
+                                document.body.appendChild(verticalLine);
+                            }
+                            
+                            // Position the vertical line
+                            const chartPosition = chart.canvas.getBoundingClientRect();
+                            verticalLine.style.opacity = 1;
+                            verticalLine.style.borderLeft = '2px dashed rgba(0, 0, 0, 0.7)';
+                            verticalLine.style.left = (chartPosition.left + xPosition) + 'px';
+                            verticalLine.style.top = chartPosition.top + 'px';
+                            verticalLine.style.height = chartPosition.height + 'px';
+                            verticalLine.style.zIndex = 999;
                         }
+                    }
+                },
+                onHover: function(e) {
+                    if (!e.native) return;
+                    
+                    // Add cursor style on hover
+                    const points = charts[chartId].getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
+                    if (points.length) {
+                        e.native.target.style.cursor = 'pointer';
+                    } else {
+                        e.native.target.style.cursor = 'default';
                     }
                 }
             }
         });
-    } // 🛑 End of for-loop
+        
+        // Create tooltip div if it doesn't exist
+        if (!document.getElementById('chartjs-tooltip')) {
+            const tooltipEl = document.createElement('div');
+            tooltipEl.id = 'chartjs-tooltip';
+            tooltipEl.style.opacity = 0;
+            tooltipEl.style.pointerEvents = 'none';
+            tooltipEl.style.position = 'absolute';
+            tooltipEl.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+            tooltipEl.style.borderRadius = '3px';
+            tooltipEl.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.25)';
+            tooltipEl.style.padding = '10px';
+            tooltipEl.style.zIndex = 1000;
+            document.body.appendChild(tooltipEl);
+        }
+    } // End of for-loop
 
-    // 🆕 AFTER all charts created, restore zooms
+    // AFTER all charts created, restore zooms
     restoreAllZoomStates();
 
-    // 🆕 THEN restore scroll
+    // THEN restore scroll
     window.scrollTo(0, scrollPos);
 }
 
@@ -256,6 +333,19 @@ function restoreAllZoomStates() {
     }
 }
 
+// Add CSS for vertical line and tooltip
+document.head.insertAdjacentHTML('beforeend', `
+<style>
+    #chartjs-vertical-line {
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+    }
+    #chartjs-tooltip {
+        transition: opacity 0.2s ease;
+    }
+</style>
+`);
+
 // Initial load
 fetchDataAndUpdateCharts();
 
@@ -264,3 +354,12 @@ setInterval(async () => {
     saveAllZoomStates();
     await fetchDataAndUpdateCharts();
 }, 300000);
+
+// Clean up vertical line and tooltip when navigating away
+window.addEventListener('beforeunload', () => {
+    const verticalLine = document.getElementById('chartjs-vertical-line');
+    const tooltip = document.getElementById('chartjs-tooltip');
+    
+    if (verticalLine) verticalLine.remove();
+    if (tooltip) tooltip.remove();
+});
