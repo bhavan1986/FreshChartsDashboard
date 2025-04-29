@@ -240,31 +240,12 @@ async function fetchDataAndUpdateCharts() {
                                 return;
                             }
 
-                            // Create tooltip content
-                            if (tooltipModel.body) {
-                                const titleLines = tooltipModel.title || [];
-                                const bodyLines = tooltipModel.body.map(b => b.lines);
-                                
-                                let innerHtml = '<div>';
-                                
-                                // Add title
-                                innerHtml += '<div class="tooltip-title">';
-                                titleLines.forEach(function(title) {
-                                    innerHtml += '<span style="font-weight: bold;">' + title + '</span>';
-                                });
-                                innerHtml += '</div>';
-                                
-                                // Add colored boxes for each dataset
-                                innerHtml += '<div class="tooltip-body">';
-                                bodyLines.forEach(function(body, i) {
-                                    const colors = tooltipModel.labelColors[i];
-                                    const colorSquare = `<span style="display: inline-block; width: 10px; height: 10px; margin-right: 5px; background-color: ${colors.backgroundColor};"></span>`;
-                                    innerHtml += '<div>' + colorSquare + body + '</div>';
-                                });
-                                innerHtml += '</div>';
-                                innerHtml += '</div>';
-                                
-                                tooltipEl.innerHTML = innerHtml;
+                            // Set caret Position
+                            tooltipEl.classList.remove('above', 'below', 'no-transform');
+                            if (tooltipModel.yAlign) {
+                                tooltipEl.classList.add(tooltipModel.yAlign);
+                            } else {
+                                tooltipEl.classList.add('no-transform');
                             }
 
                             // Create or update vertical line
@@ -288,29 +269,6 @@ async function fetchDataAndUpdateCharts() {
                             verticalLine.style.top = chartPosition.top + 'px';
                             verticalLine.style.height = chartPosition.height + 'px';
                             verticalLine.style.zIndex = 999;
-                            
-                            // Position the tooltip at cursor position
-                            const position = context.chart.canvas.getBoundingClientRect();
-                            
-                            // Set tooltip position to follow cursor (with margins to keep it visible)
-                            tooltipEl.style.opacity = 1;
-                            tooltipEl.style.left = position.left + xPosition + 10 + 'px'; // 10px offset to right of cursor
-                            tooltipEl.style.top = context.event.y + 10 + 'px'; // 10px offset below cursor
-                            
-                            // Check if tooltip would go off screen and adjust if needed
-                            const tooltipRect = tooltipEl.getBoundingClientRect();
-                            const windowWidth = window.innerWidth;
-                            const windowHeight = window.innerHeight;
-                            
-                            // Adjust horizontal position if needed
-                            if (tooltipRect.right > windowWidth) {
-                                tooltipEl.style.left = (position.left + xPosition - tooltipRect.width - 10) + 'px';
-                            }
-                            
-                            // Adjust vertical position if needed
-                            if (tooltipRect.bottom > windowHeight) {
-                                tooltipEl.style.top = (context.event.y - tooltipRect.height - 10) + 'px';
-                            }
                         }
                     }
                 },
@@ -335,46 +293,13 @@ async function fetchDataAndUpdateCharts() {
             tooltipEl.style.opacity = 0;
             tooltipEl.style.pointerEvents = 'none';
             tooltipEl.style.position = 'absolute';
-            tooltipEl.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+            tooltipEl.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
             tooltipEl.style.borderRadius = '3px';
             tooltipEl.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.25)';
             tooltipEl.style.padding = '10px';
-            tooltipEl.style.maxWidth = '250px';
-            tooltipEl.style.fontSize = '12px';
             tooltipEl.style.zIndex = 1000;
-            tooltipEl.style.whiteSpace = 'nowrap';
             document.body.appendChild(tooltipEl);
         }
-        
-        // Add mousemove event to the chart to get cursor position for tooltip
-        chart.canvas.addEventListener('mousemove', function(e) {
-            const chartArea = chart.chartArea;
-            const chartPosition = chart.canvas.getBoundingClientRect();
-            
-            // Only show tooltip if inside chart area
-            if (
-                e.offsetX >= chartArea.left && 
-                e.offsetX <= chartArea.right && 
-                e.offsetY >= chartArea.top && 
-                e.offsetY <= chartArea.bottom
-            ) {
-                const verticalLine = document.getElementById('chartjs-vertical-line');
-                if (verticalLine) {
-                    verticalLine.style.opacity = 1;
-                    verticalLine.style.left = (chartPosition.left + e.offsetX) + 'px';
-                }
-            } else {
-                const verticalLine = document.getElementById('chartjs-vertical-line');
-                if (verticalLine) {
-                    verticalLine.style.opacity = 0;
-                }
-                
-                const tooltipEl = document.getElementById('chartjs-tooltip');
-                if (tooltipEl) {
-                    tooltipEl.style.opacity = 0;
-                }
-            }
-        });
     } // End of for-loop
 
     // AFTER all charts created, restore zooms
@@ -413,23 +338,10 @@ document.head.insertAdjacentHTML('beforeend', `
 <style>
     #chartjs-vertical-line {
         pointer-events: none;
-        transition: opacity 0.15s ease, left 0.05s linear;
-        z-index: 999;
+        transition: opacity 0.2s ease;
     }
     #chartjs-tooltip {
-        transition: opacity 0.15s ease, left 0.05s linear, top 0.05s linear;
-        z-index: 1000;
-        pointer-events: none;
-    }
-    .tooltip-title {
-        margin-bottom: 5px;
-        font-size: 13px;
-        text-align: center;
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 3px;
-    }
-    .tooltip-body div {
-        margin: 3px 0;
+        transition: opacity 0.2s ease;
     }
 </style>
 `);
