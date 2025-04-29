@@ -12,6 +12,7 @@ EXCEL_FILE_PATH = "/Documents/Trades_Charts.xlsm"
 LOCAL_SAVE_PATH = "Trades_Charts.xlsm"
 
 def get_access_token():
+    print("🔵 Requesting Access Token...")
     url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
     data = {
@@ -21,13 +22,18 @@ def get_access_token():
         'scope': 'https://graph.microsoft.com/.default'
     }
     response = requests.post(url, headers=headers, data=data)
+    print(f"🔵 Token Response Status: {response.status_code}")
     response.raise_for_status()
-    return response.json()['access_token']
+    token = response.json()['access_token']
+    print("✅ Access Token Received")
+    return token
 
 def download_excel(access_token):
+    print(f"🔵 Downloading Excel file from: {EXCEL_FILE_PATH}")
     url = f"https://graph.microsoft.com/v1.0/me/drive/root:{EXCEL_FILE_PATH}:/content"
     headers = {'Authorization': f'Bearer {access_token}'}
     response = requests.get(url)
+    print(f"🔵 File Download Response Status: {response.status_code}")
     response.raise_for_status()
     with open(LOCAL_SAVE_PATH, 'wb') as f:
         f.write(response.content)
@@ -35,9 +41,15 @@ def download_excel(access_token):
 
 while True:
     try:
+        print("⏳ Starting new fetch cycle...")
+        print(f"TENANT_ID: {TENANT_ID}")
+        print(f"CLIENT_ID: {CLIENT_ID}")
+        if not CLIENT_SECRET:
+            print("❌ CLIENT_SECRET is empty!")
+        
         token = get_access_token()
         download_excel(token)
     except Exception as e:
         print(f"❌ Error: {e}")
-    print("Sleeping 300 seconds...\n")
+    print("🟰 Sleeping 300 seconds...\n")
     time.sleep(300)
