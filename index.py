@@ -48,7 +48,11 @@ def index():
 
 @app.route('/data')
 def data():
-    chart_data = load_excel_data()
+    try:
+        chart_data = load_excel_data()
+    except FileNotFoundError:
+        print("❌ Excel file not found during /data request.")
+        return jsonify({})
     return jsonify(chart_data)
 
 # Important for Render hosting
