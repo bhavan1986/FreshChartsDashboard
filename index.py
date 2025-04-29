@@ -6,8 +6,9 @@ import io
 app = Flask(__name__)
 
 def load_excel_data():
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(BASE_DIR, "Trades_Charts.xlsm")
+    #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    #file_path = os.path.join(BASE_DIR, "Trades_Charts.xlsm")
+    file_path = "/data/Trades_Charts.xlsm"
 
     # ✅ Check if file exists before trying to load
     if not os.path.exists(file_path):

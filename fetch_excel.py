@@ -12,8 +12,9 @@ CLIENT_SECRET = os.environ["CLIENT_SECRET"]
 
 USER_ID = "542ea7de-925a-40e9-ba86-07c7e82b8336"
 EXCEL_FILE_PATH = "/Trades_Charts.xlsm"
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOCAL_SAVE_PATH = os.path.join(BASE_DIR, "Trades_Charts.xlsm")
+#BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+#LOCAL_SAVE_PATH = os.path.join(BASE_DIR, "Trades_Charts.xlsm")
+LOCAL_SAVE_PATH = "/data/Trades_Charts.xlsm"  # Shared disk location
 
 def get_access_token():
     print("🔵 Requesting access token...")
