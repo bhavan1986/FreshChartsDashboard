@@ -9,6 +9,9 @@ def load_excel_data():
     #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     #file_path = os.path.join(BASE_DIR, "Trades_Charts.xlsm")
     file_path = "/data/Trades_Charts.xlsm"
+    
+    print("Looking for file at:", file_path)
+    print("Directory listing:", os.listdir("/data"))
 
     # ✅ Check if file exists before trying to load
     if not os.path.exists(file_path):
