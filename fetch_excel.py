@@ -7,7 +7,7 @@ CLIENT_ID = os.environ["CLIENT_ID"]
 CLIENT_SECRET = os.environ["CLIENT_SECRET"]
 
 USER_ID = "542ea7de-925a-40e9-ba86-07c7e82b8336"
-EXCEL_FILE_PATH = "/Documents/Trades_Charts.xlsm"
+EXCEL_FILE_PATH = "/Trades_Charts.xlsm"
 LOCAL_SAVE_PATH = "Trades_Charts.xlsm"
 
 def get_access_token():
