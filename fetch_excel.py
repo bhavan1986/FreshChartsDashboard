@@ -38,7 +38,7 @@ def get_access_token():
 
 def download_excel(access_token):
     print(f"🔵 Downloading Excel file from: {EXCEL_FILE_PATH}")
-    url = f"https://graph.microsoft.com/v1.0/drive/root:{EXCEL_FILE_PATH}:/content"
+    url = f"https://graph.microsoft.com/v1.0/users/5c62cfe5-d888-4fac-8f30-fab044d48eff/drive/root:{EXCEL_FILE_PATH}:/content"
     headers = {'Authorization': f'Bearer {access_token}'}
     response = requests.get(url, headers=headers, timeout=10)
     print(f"🔵 File Download Response Status: {response.status_code}")
