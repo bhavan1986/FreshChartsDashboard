@@ -26,12 +26,15 @@ def get_access_token():
         'client_secret': CLIENT_SECRET,
         'scope': 'https://graph.microsoft.com/.default'
     }
-    response = requests.post(url, headers=headers, timeout=10)
+    print(f"🛠 POST DATA: {data}")
+    response = requests.post(url, headers=headers, data=data, timeout=10)
     print(f"🔵 Token Response Status: {response.status_code}")
+    print(f"🛠 RAW RESPONSE TEXT: {response.text}")
     response.raise_for_status()
     token = response.json()['access_token']
     print("✅ Access Token Received")
     return token
+
 
 def download_excel(access_token):
     print(f"🔵 Downloading Excel file from: {EXCEL_FILE_PATH}")
