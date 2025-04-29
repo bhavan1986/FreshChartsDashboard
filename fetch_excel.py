@@ -1,23 +1,18 @@
 import requests
+import time
 import os
 
-print("✅ Python script started...")
-
-# 🔥 Read from environment variables
 TENANT_ID = os.environ.get("TENANT_ID")
 CLIENT_ID = os.environ.get("CLIENT_ID")
 CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
 
-print(f"✅ TENANT_ID: {TENANT_ID}")
-print(f"✅ CLIENT_ID: {CLIENT_ID}")
-print(f"✅ CLIENT_SECRET: {'SET' if CLIENT_SECRET else 'NOT SET'}")
-
-# 📄 Excel File Path in OneDrive
-EXCEL_FILE_PATH = "/Documents/Trades_Charts.xlsm"
+# ✔️ Use your new business OneDrive driveId and correct file path
+DRIVE_ID = "b!agwTnnmZNUme_FrWOjFLrEWG6AQXTXdHp4nc4_bSwXfT-sLOaMJvS66sikSquz-D"
+EXCEL_FILE_PATH = "/Trades_Charts.xlsm"
 LOCAL_SAVE_PATH = "Trades_Charts.xlsm"
 
 def get_access_token():
-    print("🔵 Requesting Access Token...")
+    print("🔵 Requesting access token...")
     url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
     data = {
@@ -26,34 +21,27 @@ def get_access_token():
         'client_secret': CLIENT_SECRET,
         'scope': 'https://graph.microsoft.com/.default'
     }
-    print(f"🛠 POST DATA: {data}")
-    response = requests.post(url, headers=headers, data=data, timeout=10)
-    print(f"🔵 Token Response Status: {response.status_code}")
-    print(f"🛠 RAW RESPONSE TEXT: {response.text}")
+    response = requests.post(url, headers=headers, data=data)
     response.raise_for_status()
     token = response.json()['access_token']
-    print("✅ Access Token Received")
+    print("✅ Access token received.")
     return token
 
-
-def download_excel(access_token):
-    print(f"🔵 Downloading Excel file from: {EXCEL_FILE_PATH}")
-    url = f"https://graph.microsoft.com/v1.0/users/5c62cfe5-d888-4fac-8f30-fab044d48eff/drive/root:{EXCEL_FILE_PATH}:/content"
-    headers = {'Authorization': f'Bearer {access_token}'}
-    response = requests.get(url, headers=headers, timeout=10)
-    print(f"🔵 File Download Response Status: {response.status_code}")
+def download_excel(token):
+    url = f"https://graph.microsoft.com/v1.0/drives/{DRIVE_ID}/root:{EXCEL_FILE_PATH}:/content"
+    headers = {'Authorization': f'Bearer {token}'}
+    print(f"🔵 Downloading: {EXCEL_FILE_PATH}")
+    response = requests.get(url, headers=headers)
+    print(f"🔵 File download status: {response.status_code}")
     response.raise_for_status()
     with open(LOCAL_SAVE_PATH, 'wb') as f:
         f.write(response.content)
-    print(f"✅ File downloaded successfully!")
+    print(f"✅ File saved as '{LOCAL_SAVE_PATH}' at {time.strftime('%Y-%m-%d %H:%M:%S')}")
 
-# 🆕 NEW MAIN FUNCTION (runs once and exits)
-def main():
+if __name__ == "__main__":
     try:
+        print("⏳ Starting fetch...")
         token = get_access_token()
         download_excel(token)
     except Exception as e:
         print(f"❌ Error: {e}")
-
-if __name__ == "__main__":
-    main()
