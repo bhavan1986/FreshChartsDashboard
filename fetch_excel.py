@@ -8,7 +8,7 @@ CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
 
 # ✔️ Use your new business OneDrive driveId and correct file path
 DRIVE_ID = "b!agwTnnmZNUme_FrWOjFLrEWG6AQXTXdHp4nc4_bSwXfT-sLOaMJvS66sikSquz-D"
-EXCEL_FILE_PATH = "/Trades_Charts.xlsm"
+EXCEL_FILE_PATH = "/Documents/Trades_Charts.xlsm"
 LOCAL_SAVE_PATH = "Trades_Charts.xlsm"
 
 def get_access_token():
