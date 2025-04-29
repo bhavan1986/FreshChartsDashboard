@@ -2,10 +2,17 @@ import requests
 import time
 import os
 
+print("✅ Python script started...")
+
 # 🔥 Read from environment variables
 TENANT_ID = os.environ.get("TENANT_ID")
 CLIENT_ID = os.environ.get("CLIENT_ID")
 CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
+
+print(f"✅ TENANT_ID: {TENANT_ID}")
+print(f"✅ CLIENT_ID: {CLIENT_ID}")
+print(f"✅ CLIENT_SECRET: {'SET' if CLIENT_SECRET else 'NOT SET'}")
+
 
 # 📄 Excel File Path in OneDrive
 EXCEL_FILE_PATH = "/Documents/Trades_Charts.xlsm"
