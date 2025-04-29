@@ -1,6 +1,8 @@
 from flask import Flask, render_template, jsonify
 import pandas as pd
 import os
+import io
+
 app = Flask(__name__)
 
 def load_excel_data():
