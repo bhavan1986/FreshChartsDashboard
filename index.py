@@ -6,9 +6,13 @@ import io
 app = Flask(__name__)
 
 def load_excel_data():
-    # 📄 Load Excel directly from local file
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(BASE_DIR, "Trades_Charts.xlsm")
+
+    # ✅ Check if file exists before trying to load
+    if not os.path.exists(file_path):
+        print("❌ Excel file not found during /data request.")
+        return {}
 
     xl = pd.ExcelFile(file_path, engine='openpyxl')
 
