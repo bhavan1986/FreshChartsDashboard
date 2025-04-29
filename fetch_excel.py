@@ -21,23 +21,39 @@ def get_access_token():
         'client_secret': CLIENT_SECRET,
         'scope': 'https://graph.microsoft.com/.default'
     }
-    response = requests.post(url, headers=headers, data=data)
-    print(f"🔵 Token Response Status: {response.status_code}")
-    response.raise_for_status()
-    token = response.json()['access_token']
-    print("✅ Access Token Received")
-    return token
+    try:
+        response = requests.post(url, headers=headers, data=data, timeout=10)
+        print(f"🔵 Token Response Status: {response.status_code}")
+        response.raise_for_status()
+        token = response.json()['access_token']
+        print("✅ Access Token Received")
+        return token
+    except requests.exceptions.Timeout:
+        print("❌ Timeout trying to get Access Token!")
+        raise
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Other error: {e}")
+        raise
+
 
 def download_excel(access_token):
     print(f"🔵 Downloading Excel file from: {EXCEL_FILE_PATH}")
     url = f"https://graph.microsoft.com/v1.0/me/drive/root:{EXCEL_FILE_PATH}:/content"
     headers = {'Authorization': f'Bearer {access_token}'}
-    response = requests.get(url)
-    print(f"🔵 File Download Response Status: {response.status_code}")
-    response.raise_for_status()
-    with open(LOCAL_SAVE_PATH, 'wb') as f:
-        f.write(response.content)
-    print(f"✅ File downloaded successfully at {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        print(f"🔵 File Download Response Status: {response.status_code}")
+        response.raise_for_status()
+        with open(LOCAL_SAVE_PATH, 'wb') as f:
+            f.write(response.content)
+        print(f"✅ File downloaded successfully at {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    except requests.exceptions.Timeout:
+        print("❌ Timeout trying to download Excel file!")
+        raise
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Other error: {e}")
+        raise
+
 
 while True:
     try:
