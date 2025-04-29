@@ -1,6 +1,8 @@
 let charts = {};
 let currentZoomState = {};
 
+//hello
+
 async function fetchDataAndUpdateCharts() {
     const scrollPos = window.scrollY; // Save scroll position early
 
@@ -75,6 +77,21 @@ async function fetchDataAndUpdateCharts() {
         const paddedMinY = minY - padding;
         const paddedMaxY = maxY + padding;
 
+        // Create a vertical line div for this chart
+        const verticalLineId = 'vertical-line-' + chartId;
+        const verticalLine = document.createElement('div');
+        verticalLine.id = verticalLineId;
+        verticalLine.className = 'vertical-hover-line';
+        verticalLine.style.position = 'absolute';
+        verticalLine.style.display = 'none';
+        verticalLine.style.height = '100%';
+        verticalLine.style.borderLeft = '2px dashed rgba(0,0,0,0.7)';
+        verticalLine.style.pointerEvents = 'none';
+        verticalLine.style.zIndex = '10';
+        chartDiv.style.position = 'relative';
+        chartDiv.appendChild(verticalLine);
+
+        // Create chart with hover plugins
         charts[chartId] = new Chart(ctx, {
             type: 'line',
             data: {
@@ -207,6 +224,9 @@ async function fetchDataAndUpdateCharts() {
                         mode: 'index',
                         intersect: false,
                         axis: 'x',
+                        position: 'nearest',
+                        caretPadding: 10,
+                        caretSize: 0,
                         callbacks: {
                             label: function(context) {
                                 let label = context.dataset.label || '';
@@ -219,87 +239,48 @@ async function fetchDataAndUpdateCharts() {
                                 return label;
                             }
                         },
-                        // Add the vertical line on hover
-                        external: function(context) {
-                            // Get tooltip element
-                            const tooltipEl = document.getElementById('chartjs-tooltip');
-                            
-                            // Hide if no tooltip
-                            const tooltipModel = context.tooltip;
-                            if (tooltipModel.opacity === 0) {
-                                if (tooltipEl) {
-                                    tooltipEl.style.opacity = 0;
-                                }
-                                
-                                // Remove vertical line if exists
-                                const verticalLine = document.getElementById('chartjs-vertical-line');
-                                if (verticalLine) {
-                                    verticalLine.style.opacity = 0;
-                                }
-                                
-                                return;
-                            }
-
-                            // Set caret Position
-                            tooltipEl.classList.remove('above', 'below', 'no-transform');
-                            if (tooltipModel.yAlign) {
-                                tooltipEl.classList.add(tooltipModel.yAlign);
-                            } else {
-                                tooltipEl.classList.add('no-transform');
-                            }
-
-                            // Create or update vertical line
-                            let verticalLine = document.getElementById('chartjs-vertical-line');
-                            const chart = context.chart;
-                            const xPosition = tooltipModel.caretX;
-                            
-                            if (!verticalLine) {
-                                verticalLine = document.createElement('div');
-                                verticalLine.id = 'chartjs-vertical-line';
-                                verticalLine.style.position = 'absolute';
-                                verticalLine.style.pointerEvents = 'none';
-                                document.body.appendChild(verticalLine);
-                            }
-                            
-                            // Position the vertical line
-                            const chartPosition = chart.canvas.getBoundingClientRect();
-                            verticalLine.style.opacity = 1;
-                            verticalLine.style.borderLeft = '2px dashed rgba(0, 0, 0, 0.7)';
-                            verticalLine.style.left = (chartPosition.left + xPosition) + 'px';
-                            verticalLine.style.top = chartPosition.top + 'px';
-                            verticalLine.style.height = chartPosition.height + 'px';
-                            verticalLine.style.zIndex = 999;
-                        }
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        titleColor: '#000',
+                        titleFont: {
+                            weight: 'bold'
+                        },
+                        bodyColor: '#000',
+                        bodyFont: {
+                            weight: 'bold'
+                        },
+                        borderColor: 'rgba(0,0,0,0.1)',
+                        borderWidth: 1
                     }
                 },
-                onHover: function(e) {
-                    if (!e.native) return;
+                onHover: function(event, elements) {
+                    const vLine = document.getElementById(verticalLineId);
                     
-                    // Add cursor style on hover
-                    const points = charts[chartId].getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
-                    if (points.length) {
-                        e.native.target.style.cursor = 'pointer';
+                    if (!event || !vLine) return;
+                    
+                    // Only show line if we're over the chart area
+                    const rect = event.chart.canvas.getBoundingClientRect();
+                    const chartArea = event.chart.chartArea;
+                    const x = event.x - rect.left;
+                    const y = event.y - rect.top;
+                    
+                    if (x >= chartArea.left && x <= chartArea.right &&
+                        y >= chartArea.top && y <= chartArea.bottom) {
+                        vLine.style.display = 'block';
+                        vLine.style.left = x + 'px';
                     } else {
-                        e.native.target.style.cursor = 'default';
+                        vLine.style.display = 'none';
                     }
                 }
             }
         });
         
-        // Create tooltip div if it doesn't exist
-        if (!document.getElementById('chartjs-tooltip')) {
-            const tooltipEl = document.createElement('div');
-            tooltipEl.id = 'chartjs-tooltip';
-            tooltipEl.style.opacity = 0;
-            tooltipEl.style.pointerEvents = 'none';
-            tooltipEl.style.position = 'absolute';
-            tooltipEl.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-            tooltipEl.style.borderRadius = '3px';
-            tooltipEl.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.25)';
-            tooltipEl.style.padding = '10px';
-            tooltipEl.style.zIndex = 1000;
-            document.body.appendChild(tooltipEl);
-        }
+        // Add mouseout event to hide the vertical line when mouse leaves the chart
+        canvas.addEventListener('mouseout', function() {
+            const vLine = document.getElementById(verticalLineId);
+            if (vLine) {
+                vLine.style.display = 'none';
+            }
+        });
     } // End of for-loop
 
     // AFTER all charts created, restore zooms
@@ -333,15 +314,12 @@ function restoreAllZoomStates() {
     }
 }
 
-// Add CSS for vertical line and tooltip
+// Add some basic CSS
 document.head.insertAdjacentHTML('beforeend', `
 <style>
-    #chartjs-vertical-line {
+    .vertical-hover-line {
         pointer-events: none;
-        transition: opacity 0.2s ease;
-    }
-    #chartjs-tooltip {
-        transition: opacity 0.2s ease;
+        z-index: 10;
     }
 </style>
 `);
@@ -354,12 +332,3 @@ setInterval(async () => {
     saveAllZoomStates();
     await fetchDataAndUpdateCharts();
 }, 300000);
-
-// Clean up vertical line and tooltip when navigating away
-window.addEventListener('beforeunload', () => {
-    const verticalLine = document.getElementById('chartjs-vertical-line');
-    const tooltip = document.getElementById('chartjs-tooltip');
-    
-    if (verticalLine) verticalLine.remove();
-    if (tooltip) tooltip.remove();
-});
