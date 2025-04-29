@@ -1,23 +1,13 @@
 from flask import Flask, render_template, jsonify
 import pandas as pd
-import requests
-import io
 
 app = Flask(__name__)
 
 def load_excel_data():
-    # 📂 Dropbox direct download link
-    file_url = 'https://www.dropbox.com/scl/fi/rpye8jwg1v97bkw8emaor/Trades_Charts.xlsm?rlkey=wsdy4ikza4vtipojoqlmvys4u&st=8jrjwogn&dl=1'
+    # 📄 Load Excel directly from local file
+    file_path = "Trades_Charts.xlsm"
 
-    # 📥 Download the file
-    response = requests.get(file_url)
-    if response.status_code != 200:
-        raise Exception(f"Failed to download the Excel file. Status Code: {response.status_code}")
-
-    excel_data = response.content
-
-    # 📄 Read Excel from bytes
-    xl = pd.ExcelFile(io.BytesIO(excel_data), engine='openpyxl')
+    xl = pd.ExcelFile(file_path, engine='openpyxl')
 
     chart_data = {}
 
@@ -61,6 +51,6 @@ def data():
     chart_data = load_excel_data()
     return jsonify(chart_data)
 
-# 🆕 Important for Render:
+# Important for Render hosting
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
