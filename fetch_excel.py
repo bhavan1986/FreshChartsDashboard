@@ -2,12 +2,11 @@ import requests
 import time
 import os
 
-TENANT_ID = os.environ.get("TENANT_ID")
-CLIENT_ID = os.environ.get("CLIENT_ID")
-CLIENT_SECRET = os.environ.get("CLIENT_SECRET")
+TENANT_ID = os.environ["TENANT_ID"]
+CLIENT_ID = os.environ["CLIENT_ID"]
+CLIENT_SECRET = os.environ["CLIENT_SECRET"]
 
-# ✔️ Use your new business OneDrive driveId and correct file path
-DRIVE_ID = "b!agwTnnmZNUme_FrWOjFLrEWG6AQXTXdHp4nc4_bSwXfT-sLOaMJvS66sikSquz-D"
+USER_ID = "542ea7de-925a-40e9-ba86-07c7e82b8336"
 EXCEL_FILE_PATH = "/Documents/Trades_Charts.xlsm"
 LOCAL_SAVE_PATH = "Trades_Charts.xlsm"
 
@@ -28,7 +27,7 @@ def get_access_token():
     return token
 
 def download_excel(token):
-    url = f"https://graph.microsoft.com/v1.0/drives/{DRIVE_ID}/root:{EXCEL_FILE_PATH}:/content"
+    url = f"https://graph.microsoft.com/v1.0/users/{USER_ID}/drive/root:{EXCEL_FILE_PATH}:/content"
     headers = {'Authorization': f'Bearer {token}'}
     print(f"🔵 Downloading: {EXCEL_FILE_PATH}")
     response = requests.get(url, headers=headers)
