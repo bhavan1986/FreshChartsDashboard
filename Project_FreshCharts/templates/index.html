@@ -12,6 +12,11 @@
         <div class="sidebar" id="sidebar"></div>
         <div class="main" id="charts-container"></div>
     </div>
+	<div id="charts-container">
+    {% if chart_data|length == 0 %}
+        <p style="color: red; font-weight: bold;">Excel file not yet available. Please check back shortly.</p>
+    {% endif %}
+	</div>
     <script src="/static/js/updateCharts.js"></script>
 </body>
 </html>

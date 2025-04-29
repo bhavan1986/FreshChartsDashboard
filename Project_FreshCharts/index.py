@@ -4,7 +4,14 @@ import pandas as pd
 app = Flask(__name__)
 
 def load_excel_data():
-    xl = pd.ExcelFile('Data1.xlsx', engine='openpyxl')  # 📌 Hardcoded local file
+    #xl = pd.ExcelFile('Data1.xlsx', engine='openpyxl')  # 📌 Hardcoded local file
+    file_path = "Trades_Charts.xlsm"
+    
+    if not os.path.exists(file_path):
+        print("❌ Excel file not found.")
+        return {}
+        
+        
 
     chart_data = {}
 
