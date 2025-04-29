@@ -204,8 +204,9 @@ async function fetchDataAndUpdateCharts() {
                         position: 'top'
                     },
                     tooltip: {
-                        mode: 'nearest',
+                        mode: 'index',
                         intersect: false,
+						axis:'x',
                         callbacks: {
                             label: function(context) {
                                 let label = context.dataset.label || '';
