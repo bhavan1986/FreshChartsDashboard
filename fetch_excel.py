@@ -54,4 +54,4 @@ if __name__ == "__main__":
             print(f"❌ Error: {e}")
         
         print("⏳ Waiting for the next fetch in 5 minutes...")
-        time.sleep(600)  # Wait for 5 minutes (300 seconds) before running again
+        time.sleep(60)  # Wait for 5 minutes (300 seconds) before running again
