@@ -247,6 +247,22 @@ async function fetchDataAndUpdateCharts() {
                                     label += (context.parsed.y * 100).toFixed(2) + '%';
                                 }
                                 return label;
+                            },
+                            // Add footer callback to display timestamp when available
+                            footer: function(tooltipItems) {
+                                // Get the chart and index
+                                const chart = tooltipItems[0].chart;
+                                const index = tooltipItems[0].dataIndex;
+                                
+                                // Check if timestamps exist and display if available
+                                if (chart.timestamps && 
+                                    chart.timestamps[index] && 
+                                    chart.timestamps[index] !== "" && 
+                                    chart.timestamps[index] !== null && 
+                                    chart.timestamps[index] !== undefined) {
+                                    return 'Timestamp: ' + chart.timestamps[index];
+                                }
+                                return ''; // Omit timestamp when not available
                             }
                         },
                         // Add the vertical line on hover
@@ -315,6 +331,11 @@ async function fetchDataAndUpdateCharts() {
                 }
             }
         });
+        
+        // Store y4 data (timestamp) with the chart if it exists
+        if (data[sheetName].y4) {
+            charts[chartId].timestamps = data[sheetName].y4;
+        }
         
         // Create tooltip div if it doesn't exist
         if (!document.getElementById('chartjs-tooltip')) {
