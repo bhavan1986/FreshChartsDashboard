@@ -393,6 +393,7 @@ async function fetchDataAndUpdateCharts() {
                             },
                             pinch: {
                                 enabled: true,
+								threshold: 0.1, // Increase sensitivity for mobile
                             },
                             drag: {
                                 enabled: true,
