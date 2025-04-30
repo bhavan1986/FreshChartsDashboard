@@ -1,13 +1,13 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 import pandas as pd
 import os
 import io
+import openpyxl
+import datetime
 
 app = Flask(__name__)
 
 def load_excel_data():
-    #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    #file_path = os.path.join(BASE_DIR, "Trades_Charts.xlsm")
     file_path = "/data/Trades_Charts.xlsm"
     
     print("Looking for file at:", file_path)
@@ -68,6 +68,54 @@ def data():
         print("❌ Excel file not found during /data request.")
         return jsonify({})
     return jsonify(chart_data)
+
+@app.route('/get-runlog-timestamp')
+def get_runlog_timestamp():
+    try:
+        file_path = "/data/Trades_Charts.xlsm"
+        
+        if not os.path.exists(file_path):
+            print(f"❌ Excel file not found at {file_path}")
+            return jsonify({'error': 'Excel file not found'}), 404
+        
+        try:
+            # Use openpyxl to directly access cell J2
+            workbook = openpyxl.load_workbook(file_path, data_only=True)
+            
+            if 'RunLog' not in workbook.sheetnames:
+                print("❌ RunLog sheet not found in workbook")
+                return jsonify({'error': 'RunLog sheet not found'}), 404
+                
+            worksheet = workbook['RunLog']
+            
+            # Get the value from cell J2
+            j2_cell = worksheet['J2']
+            
+            if j2_cell is None:
+                print("❌ Cell J2 not found")
+                return jsonify({'error': 'Cell J2 not found'}), 404
+                
+            timestamp_value = j2_cell.value
+            
+            # Format timestamp if needed
+            if isinstance(timestamp_value, datetime.datetime):
+                timestamp_value = timestamp_value.strftime('%Y-%m-%d %H:%M:%S')
+            
+            if timestamp_value is None:
+                print("❌ Cell J2 is empty")
+                # Use current time as fallback
+                timestamp_value = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                
+            print(f"Retrieved timestamp from J2: {timestamp_value}")
+            return jsonify({'value': str(timestamp_value)})
+                
+        except Exception as e:
+            print(f"❌ Error reading cell J2: {str(e)}")
+            return jsonify({'error': f'Error reading cell J2: {str(e)}'}), 500
+            
+    except Exception as e:
+        print(f"❌ Error getting RunLog timestamp: {str(e)}")
+        return jsonify({'error': 'Failed to get RunLog timestamp'}), 500
 
 # Important for Render hosting
 if __name__ == '__main__':

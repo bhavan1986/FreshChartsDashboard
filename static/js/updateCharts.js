@@ -1,8 +1,52 @@
 let charts = {};
 let currentZoomState = {};
 
+// Function to fetch and display the RunLog timestamp
+async function fetchRunLogTimestamp() {
+    try {
+        const response = await fetch('/get-runlog-timestamp');
+        const data = await response.json();
+        
+        if (data && data.value) {
+            // Create or update the timestamp element
+            let timestampDiv = document.getElementById('latest-timestamp-display');
+            
+            if (!timestampDiv) {
+                // Create if it doesn't exist
+                timestampDiv = document.createElement('div');
+                timestampDiv.id = 'latest-timestamp-display';
+                timestampDiv.className = 'latest-timestamp';
+                
+                // Style it
+                timestampDiv.style.padding = '10px';
+                timestampDiv.style.marginBottom = '10px';
+                timestampDiv.style.borderBottom = '1px solid #ccc';
+                timestampDiv.style.fontWeight = 'bold';
+                timestampDiv.style.textAlign = 'center';
+                timestampDiv.style.backgroundColor = '#f8f9fa';
+                
+                // Add to the top of sidebar
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar.firstChild) {
+                    sidebar.insertBefore(timestampDiv, sidebar.firstChild);
+                } else {
+                    sidebar.appendChild(timestampDiv);
+                }
+            }
+            
+            // Update the content
+            timestampDiv.innerHTML = `<strong>Latest Data:</strong> ${data.value}`;
+        }
+    } catch (error) {
+        console.error('Error fetching RunLog timestamp:', error);
+    }
+}
+
 async function fetchDataAndUpdateCharts() {
     const scrollPos = window.scrollY; // Save scroll position early
+
+    // First, fetch and display the RunLog timestamp
+    await fetchRunLogTimestamp();
 
     const response = await fetch('/data');
     const data = await response.json();
@@ -10,7 +54,13 @@ async function fetchDataAndUpdateCharts() {
     const sidebar = document.getElementById('sidebar');
     const container = document.getElementById('charts-container');
 
+    // Clear the sidebar but preserve the timestamp at the top
+    const timestampDiv = document.getElementById('latest-timestamp-display');
     sidebar.innerHTML = '';
+    if (timestampDiv) {
+        sidebar.appendChild(timestampDiv);
+    }
+    
     container.innerHTML = '';
 
     for (let sheetName in data) {
@@ -596,6 +646,15 @@ document.head.insertAdjacentHTML('beforeend', `
     }
     .latest-rv {
         color: blue;
+    }
+    /* Timestamp display at top of sidebar */
+    .latest-timestamp {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #ccc;
+        font-weight: bold;
+        text-align: center;
+        background-color: #f8f9fa;
     }
 </style>
 `);
