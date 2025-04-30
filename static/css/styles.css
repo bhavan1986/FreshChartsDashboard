@@ -35,34 +35,34 @@ body {
 }
 
 .chart-container {
-    margin-bottom: 80px;
-    padding-bottom: 40px;
-    border-bottom: 1px solid #eee;
+    margin-bottom: 1px;
+    padding-bottom: 1px;
+    border-bottom: 5px solid #eee;
 }
 
 .n1p3-box {
     font-size: 12px;
-    margin-bottom: 8px;
+    margin-bottom: 0px;
 }
 
 .reset-zoom-btn {
-    margin-top: 5px;
-    font-size: 12px;
+    margin-top: 0px;
+    font-size: 16px;
     background-color: #eee;
     border: none;
-    padding: 5px;
+    padding: 0px;
     cursor: pointer;
 }
 
 canvas {
     width: 100% !important;
-    height: 400px !important;
+    height: 375px !important;
     max-width: 100%;
 }
 
 .sheet-title {
-    font-size: 16px;
+    font-size: 12px;
     font-weight: bold;
-    margin-bottom: 5px;
+    margin-bottom: 1px;
     color: black;
 }
