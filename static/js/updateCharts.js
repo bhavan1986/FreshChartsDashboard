@@ -260,7 +260,52 @@ async function fetchDataAndUpdateCharts() {
                                     chart.timestamps[index] !== "" && 
                                     chart.timestamps[index] !== null && 
                                     chart.timestamps[index] !== undefined) {
-                                    return 'Timestamp: ' + chart.timestamps[index];
+                                    
+                                    // Parse the timestamp - handle different formats
+                                    const timestamp = chart.timestamps[index];
+                                    let date;
+                                    
+                                    if (timestamp.includes('/')) {
+                                        // If format is MM/DD/YYYY HH:MM
+                                        const [datePart, timePart] = timestamp.split(' ');
+                                        const [month, day, year] = datePart.split('/');
+                                        const [hour, minute] = timePart ? timePart.split(':') : [0, 0];
+                                        
+                                        // Create date, assuming it's in PST
+                                        date = new Date(year, month - 1, day, hour, minute);
+                                    } else {
+                                        // Try to parse as ISO string or other format
+                                        date = new Date(timestamp);
+                                    }
+                                    
+                                    // Check if date is valid
+                                    if (!isNaN(date.getTime())) {
+                                        // Add 4 hours to convert from PST to EST (GMT-8 to GMT-4)
+                                        const estDate = new Date(date.getTime() + (4 * 60 * 60 * 1000));
+                                        
+                                        // Format with day of week
+                                        const days = ['Sun', 'Mon', 'Tues', 'Wed', 'Thur', 'Fri', 'Sat'];
+                                        const dayOfWeek = days[estDate.getDay()];
+                                        
+                                        // Format date
+                                        const month = estDate.getMonth() + 1; // getMonth is 0-indexed
+                                        const day = estDate.getDate();
+                                        const year = estDate.getFullYear();
+                                        
+                                        // Format time
+                                        let hours = estDate.getHours();
+                                        const minutes = estDate.getMinutes().toString().padStart(2, '0');
+                                        const ampm = hours >= 12 ? 'PM' : 'AM';
+                                        hours = hours % 12;
+                                        hours = hours ? hours : 12; // Convert 0 to 12 for 12-hour format
+                                        
+                                        // Complete EST timestamp with day of week
+                                        const estTimestamp = `${dayOfWeek}, ${month}/${day}/${year} ${hours}:${minutes} ${ampm}`;
+                                        return 'Time(EST): ' + estTimestamp;
+                                    } else {
+                                        // If we can't parse the date, just return the original
+                                        return 'Timestamp: ' + timestamp;
+                                    }
                                 }
                                 return ''; // Omit timestamp when not available
                             }
