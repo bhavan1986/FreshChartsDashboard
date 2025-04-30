@@ -122,7 +122,37 @@ async function fetchDataAndUpdateCharts() {
                             callback: function(value) {
                                 return this.getLabelForValue(value);
                             },
-                            autoSkip: false
+                            autoSkip: false,
+                            // Add color function for x-axis labels
+                            color: function(context) {
+                                const tickValue = context.tick.value;
+                                const tickLabel = context.chart.data.labels[tickValue];
+                                
+                                // Get all labels
+                                const allLabels = context.chart.data.labels;
+                                
+                                // Check if this label starts a new value group
+                                const isNewValueGroup = (index) => {
+                                    if (index === 0) return true;
+                                    return allLabels[index] !== allLabels[index-1];
+                                };
+                                
+                                // Count value group changes up to this index
+                                let groupChangeCount = 0;
+                                for (let i = 0; i <= tickValue; i++) {
+                                    if (isNewValueGroup(i)) {
+                                        groupChangeCount++;
+                                    }
+                                }
+                                
+                                // Alternate colors based on group number
+                                return groupChangeCount % 2 === 0 ? 
+                                    'rgb(75, 192, 75)' :  // Green for even groups
+                                    'rgb(255, 99, 132)';  // Red for odd groups
+                            },
+                            font: {
+                                weight: 'bold' // Make labels bold for better visibility
+                            }
                         }
                     },
                     y1: {
@@ -309,6 +339,58 @@ async function fetchDataAndUpdateCharts() {
     window.scrollTo(0, scrollPos);
 }
 
+/**
+ * Updates the color of x-axis labels on an existing chart.
+ * Call this after a chart update if you need to reapply coloring.
+ * 
+ * @param {string} chartId - The ID of the chart to update
+ */
+function updateXAxisColors(chartId) {
+    const chart = charts[chartId];
+    if (!chart) return;
+    
+    // Get the original options
+    const originalOptions = chart.options.scales.x || {};
+    
+    // Update the color function
+    chart.options.scales.x = {
+        ...originalOptions,
+        ticks: {
+            ...originalOptions.ticks,
+            color: function(context) {
+                const tickValue = context.tick.value;
+                const allLabels = chart.data.labels;
+                
+                // Check if this label starts a new value group
+                const isNewValueGroup = (index) => {
+                    if (index === 0) return true;
+                    return allLabels[index] !== allLabels[index-1];
+                };
+                
+                // Count value group changes up to this index
+                let groupChangeCount = 0;
+                for (let i = 0; i <= tickValue; i++) {
+                    if (isNewValueGroup(i)) {
+                        groupChangeCount++;
+                    }
+                }
+                
+                // Alternate colors based on group number
+                return groupChangeCount % 2 === 0 ? 
+                    'rgb(75, 192, 75)' :  // Green for even groups
+                    'rgb(255, 99, 132)';  // Red for odd groups
+            },
+            font: {
+                ...originalOptions.ticks?.font,
+                weight: 'bold' // Make labels bold for better visibility
+            }
+        }
+    };
+    
+    // Update the chart to apply changes
+    chart.update();
+}
+
 // Save zoom states before refresh
 function saveAllZoomStates() {
     for (let chartId in charts) {
@@ -329,6 +411,8 @@ function restoreAllZoomStates() {
             chart.options.scales.x.min = currentZoomState[chartId].min;
             chart.options.scales.x.max = currentZoomState[chartId].max;
             chart.update();
+            // Reapply x-axis coloring after restoring zoom state
+            updateXAxisColors(chartId);
         }
     }
 }
