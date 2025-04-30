@@ -135,20 +135,20 @@ async function fetchDataAndUpdateCharts() {
         const rvValueColor = rvValue !== null ? (rvValue >= 0 ? 'green' : 'red') : 'red';
 		
 		// Determine color for the T- value based on the number
-        let xValueColor = 'yellow'; // Default color
-        if (latestX !== '') {
-            // Try to convert to a number
-            const xNum = parseInt(latestX);
-            if (!isNaN(xNum)) {
-                if (xNum > 6) {
-                    xValueColor = 'green';
-                } else if (xNum >= 4) {
-                    xValueColor = 'darkorange'; // More readable than yellow on gray background
-                } else {
-                    xValueColor = 'red';
-                }
-            }
-        }
+				let xValueColor = 'yellow'; // Default color
+				if (latestX !== '') {
+					// Try to convert to a number
+					const xNum = parseInt(latestX);
+					if (!isNaN(xNum)) {
+						if (xNum > 6) {
+							xValueColor = 'green';
+						} else if (xNum >= 4) {
+							xValueColor = 'darkorange'; // More readable than yellow on gray background
+						} else {
+							xValueColor = 'red';
+						}
+					}
+				}
 
         // Create sidebar item with data on the right side
         const link = document.createElement('a');
@@ -386,10 +386,17 @@ async function fetchDataAndUpdateCharts() {
                         zoom: {
                             wheel: {
                                 enabled: true,
-                                modifierKey: 'ctrl'
+                                modifierKey: 'ctrl',
                             },
                             pinch: {
-                                enabled: true
+                                enabled: true,
+								threshold: 0.1, // Increase sensitivity for mobile
+                            },
+                            drag: {
+                                enabled: true,
+                                backgroundColor: 'rgba(0,0,0,0.1)',
+                                borderColor: 'rgba(0,0,0,0.5)',
+                                borderWidth: 1,
                             },
                             mode: 'x'
                         }
