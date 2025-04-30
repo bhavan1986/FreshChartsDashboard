@@ -116,8 +116,13 @@ async function fetchDataAndUpdateCharts() {
                     x: {
                         title: {
                             display: true,
-                            text: 'T - '
-                        },
+                            text: 'T MINUS ',
+							font:{
+								size: 14,
+								weight: 'bold'
+							},
+							color: 'black'
+						},
                         ticks: {
                             callback: function(value) {
                                 return this.getLabelForValue(value);
@@ -162,7 +167,12 @@ async function fetchDataAndUpdateCharts() {
                         position: 'left',
                         title: {
                             display: true,
-                            text: 'P/L % | Stock Move %'
+                            text: 'P/L %   |    Stock Move %',
+							font:{
+								size: 14,
+								weight: 'bold'
+							},
+							color: 'black'
                         },
                         ticks: {
                             callback: function(value) {
