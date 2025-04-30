@@ -135,20 +135,20 @@ async function fetchDataAndUpdateCharts() {
         const rvValueColor = rvValue !== null ? (rvValue >= 0 ? 'green' : 'red') : 'red';
 		
 		// Determine color for the T- value based on the number
-				let xValueColor = 'yellow'; // Default color
-				if (latestX !== '') {
-					// Try to convert to a number
-					const xNum = parseInt(latestX);
-					if (!isNaN(xNum)) {
-						if (xNum > 6) {
-							xValueColor = 'green';
-						} else if (xNum >= 4) {
-							xValueColor = 'darkorange'; // More readable than yellow on gray background
-						} else {
-							xValueColor = 'red';
-						}
-					}
-				}
+        let xValueColor = 'yellow'; // Default color
+        if (latestX !== '') {
+            // Try to convert to a number
+            const xNum = parseInt(latestX);
+            if (!isNaN(xNum)) {
+                if (xNum > 6) {
+                    xValueColor = 'green';
+                } else if (xNum >= 4) {
+                    xValueColor = 'darkorange'; // More readable than yellow on gray background
+                } else {
+                    xValueColor = 'red';
+                }
+            }
+        }
 
         // Create sidebar item with data on the right side
         const link = document.createElement('a');
@@ -382,6 +382,10 @@ async function fetchDataAndUpdateCharts() {
                             enabled: true,
                             mode: 'x',
                             overScaleMode: 'x',
+                            threshold: 10,  // Makes it easier to initiate pan on mobile
+                            speed: 10,      // Adjust pan speed
+                            modifierKey: null,  // Allow panning without modifier keys on mobile
+                            sensitivity: 3,   // Higher makes panning more sensitive
                             wheel: {
                                 enabled: true,
                             },
@@ -393,7 +397,7 @@ async function fetchDataAndUpdateCharts() {
                             },
                             pinch: {
                                 enabled: true,
-								threshold: 0.1, // Increase sensitivity for mobile
+                                threshold: 0.1, // Increase sensitivity for mobile
                             },
                             drag: {
                                 enabled: true,
@@ -639,6 +643,34 @@ async function fetchDataAndUpdateCharts() {
         const marker = document.getElementById('scroll-marker');
         marker.style.top = scrollPosition + 'px';
     }
+    
+    // Call the function to enhance touch support for all canvases
+    enhanceTouchSupport();
+}
+
+// Function to improve touch support for all canvas elements
+function enhanceTouchSupport() {
+    const canvases = document.querySelectorAll('canvas');
+    canvases.forEach(canvas => {
+        let isDragging = false;
+        
+        canvas.addEventListener('touchstart', function(e) {
+            isDragging = true;
+            // Prevent default scrolling behavior when touching the chart
+            e.preventDefault();
+        }, { passive: false });
+        
+        canvas.addEventListener('touchend', function() {
+            isDragging = false;
+        });
+        
+        canvas.addEventListener('touchmove', function(e) {
+            if (isDragging) {
+                // Prevent default scrolling behavior during chart panning
+                e.preventDefault();
+            }
+        }, { passive: false });
+    });
 }
 
 // Add CSS for vertical line, tooltip, and sidebar chart stats
@@ -676,6 +708,13 @@ document.head.insertAdjacentHTML('beforeend', `
         font-weight: bold;
         text-align: center;
         background-color: #f8f9fa;
+    }
+    /* Add touch-specific CSS for better mobile experience */
+    canvas {
+        touch-action: none; /* Prevents browser handling of touch gestures */
+    }
+    .chart-container {
+        -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
     }
 </style>
 `);
