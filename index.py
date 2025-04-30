@@ -50,7 +50,7 @@ def load_excel_data():
                 'y1': clean_y1,
                 'y2': clean_y2,
                 'y3': clean_y3,
-                'y4' : clean_y4
+                'y4' : clean_y4,
                 'n1p3': n1p3
             }
 
