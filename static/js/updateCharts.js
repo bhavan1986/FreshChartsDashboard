@@ -16,10 +16,86 @@ async function fetchDataAndUpdateCharts() {
     for (let sheetName in data) {
         const chartId = 'chart_' + sheetName.replace(/\s+/g, '_');
 
-        // Sidebar link
+        // Get the data for this chart
+        const xLabels = data[sheetName].x;
+        const y1 = data[sheetName].y1;
+        const y2 = data[sheetName].y2;
+        const y3 = data[sheetName].y3;
+
+        // Find the last valid data point
+        let lastIndex = xLabels.length - 1;
+        // Go backwards until we find valid data for at least one of the series
+        while (lastIndex >= 0 && 
+               (y1[lastIndex] === null || y1[lastIndex] === undefined || isNaN(y1[lastIndex])) &&
+               (y3[lastIndex] === null || y3[lastIndex] === undefined || isNaN(y3[lastIndex]))) {
+            lastIndex--;
+        }
+
+        // Get latest values if we have valid data
+        let latestX = '';
+        let formattedY1 = 'N/A';
+        let formattedY3 = 'N/A';
+        let plValue = null;
+        let rvValue = null;
+
+        if (lastIndex >= 0) {
+            latestX = xLabels[lastIndex];
+            
+            if (y1[lastIndex] !== null && y1[lastIndex] !== undefined && !isNaN(y1[lastIndex])) {
+                plValue = y1[lastIndex];
+                formattedY1 = (plValue * 100).toFixed(2) + '%';
+            }
+            
+            if (y3[lastIndex] !== null && y3[lastIndex] !== undefined && !isNaN(y3[lastIndex])) {
+                rvValue = y3[lastIndex];
+                formattedY3 = (rvValue * 100).toFixed(2) + '%';
+            }
+        }
+
+        // Determine colors for the values only (not the labels)
+        const plValueColor = plValue !== null ? (plValue >= 0 ? 'green' : 'red') : 'blue';
+        const rvValueColor = rvValue !== null ? (rvValue >= 0 ? 'green' : 'red') : 'red';
+		
+		// Determine color for the T- value based on the number
+				let xValueColor = 'yellow'; // Default color
+				if (latestX !== '') {
+					// Try to convert to a number
+					const xNum = parseInt(latestX);
+					if (!isNaN(xNum)) {
+						if (xNum > 6) {
+							xValueColor = 'green';
+						} else if (xNum >= 4) {
+							xValueColor = 'darkorange'; // More readable than yellow on gray background
+						} else {
+							xValueColor = 'red';
+						}
+					}
+				}
+
+        // Create sidebar item with data on the right side
         const link = document.createElement('a');
         link.href = '#' + chartId;
-        link.textContent = sheetName;
+        link.style.display = 'flex';
+        link.style.justifyContent = 'space-between';
+        link.style.alignItems = 'center';
+        
+        // Left side - just the sheet name
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = sheetName;
+        
+        // Right side - stats display
+        const statsSpan = document.createElement('span');
+        statsSpan.className = 'chart-stats';
+        statsSpan.innerHTML = `
+            <span class="latest-x">T - <span style="color: ${xValueColor}">${latestX}</span></span> | 
+            <span class="latest-pl">P/L: <b style="color: ${plValueColor}">${formattedY1}</b></span> | 
+            <span class="latest-rv">RV: <b style="color: ${rvValueColor}">${formattedY3}</b></span>
+        `;
+        
+        // Add both spans to the link
+        link.appendChild(nameSpan);
+        link.appendChild(statsSpan);
+        
         sidebar.appendChild(link);
 
         // Chart container
@@ -63,14 +139,10 @@ async function fetchDataAndUpdateCharts() {
 
         // Chart creation
         const ctx = canvas.getContext('2d');
-        const xLabels = data[sheetName].x;
-        const y1 = data[sheetName].y1;
-        const y2 = data[sheetName].y2;
-        const y3 = data[sheetName].y3;
-
         const allYValues = y1.concat(y2).concat(y3);
-        const minY = Math.min(...allYValues);
-        const maxY = Math.max(...allYValues);
+        const validYValues = allYValues.filter(val => val !== null && val !== undefined && !isNaN(val));
+        const minY = Math.min(...validYValues);
+        const maxY = Math.max(...validYValues);
         const padding = (maxY - minY) * 0.05;
         const paddedMinY = minY - padding;
         const paddedMaxY = maxY + padding;
@@ -117,12 +189,12 @@ async function fetchDataAndUpdateCharts() {
                         title: {
                             display: true,
                             text: 'T MINUS ',
-							font:{
-								size: 14,
-								weight: 'bold'
-							},
-							color: 'black'
-						},
+                            font:{
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            color: 'black'
+                        },
                         ticks: {
                             callback: function(value) {
                                 return this.getLabelForValue(value);
@@ -168,11 +240,11 @@ async function fetchDataAndUpdateCharts() {
                         title: {
                             display: true,
                             text: 'P/L %   |    Stock Move %',
-							font:{
-								size: 14,
-								weight: 'bold'
-							},
-							color: 'black'
+                            font:{
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            color: 'black'
                         },
                         ticks: {
                             callback: function(value) {
@@ -204,7 +276,12 @@ async function fetchDataAndUpdateCharts() {
                         },
                         title: {
                             display: true,
-                            text: 'Daily RV Drop %'
+                            text: 'Daily RV Drop %',
+                            font:{
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            color: 'black'
                         },
                         ticks: {
                             callback: function(value) {
@@ -493,7 +570,7 @@ function restoreAllZoomStates() {
     }
 }
 
-// Add CSS for vertical line and tooltip
+// Add CSS for vertical line, tooltip, and sidebar chart stats
 document.head.insertAdjacentHTML('beforeend', `
 <style>
     #chartjs-vertical-line {
@@ -502,6 +579,23 @@ document.head.insertAdjacentHTML('beforeend', `
     }
     #chartjs-tooltip {
         transition: opacity 0.2s ease;
+    }
+    /* Chart stats in sidebar */
+    .chart-stats {
+        font-size: 12px;
+        line-height: 1.2;
+        text-align: right;
+        white-space: nowrap;
+    }
+    .latest-x {
+        font-weight: bold;
+        color: blue;
+    }
+    .latest-pl {
+        color: blue;
+    }
+    .latest-rv {
+        color: blue;
     }
 </style>
 `);
