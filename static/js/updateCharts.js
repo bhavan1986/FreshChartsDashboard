@@ -43,25 +43,53 @@ async function fetchRunLogTimestamp() {
 }
 
 async function fetchDataAndUpdateCharts() {
-    const scrollPos = window.scrollY; // Save scroll position early
-
-    // First, fetch and display the RunLog timestamp
+    // Record current scroll position - this is critical
+    const scrollPosition = window.scrollY;
+    console.log("Initial scroll position:", scrollPosition);
+    
+    // Save current zoom states for all charts
+    for (let chartId in charts) {
+        const chart = charts[chartId];
+        if (!chart || !chart.scales || !chart.scales.x) continue;
+        
+        // Store exact min/max values
+        currentZoomState[chartId] = {
+            min: chart.scales.x.min,
+            max: chart.scales.x.max,
+            isViewingLatest: (chart.scales.x.max === undefined || 
+                             chart.scales.x.max >= chart.data.labels.length - 1),
+            dataLength: chart.data.labels.length,
+            // Store how many points are being shown
+            pointsVisible: chart.scales.x.max !== undefined && chart.scales.x.min !== undefined ? 
+                          (chart.scales.x.max - chart.scales.x.min + 1) : chart.data.labels.length
+        };
+    }
+    
+    // Store scroll position in global variable that persists through refresh
+    window.lastScrollPosition = scrollPosition;
+    document.body.dataset.scrollPosition = scrollPosition;
+    
+    // Fetch timestamp
     await fetchRunLogTimestamp();
 
+    // Fetch data
     const response = await fetch('/data');
     const data = await response.json();
 
     const sidebar = document.getElementById('sidebar');
     const container = document.getElementById('charts-container');
 
-    // Clear the sidebar but preserve the timestamp at the top
+    // Remember the timestamp element
     const timestampDiv = document.getElementById('latest-timestamp-display');
+    
+    // Clear content
     sidebar.innerHTML = '';
+    container.innerHTML = '';
+    
+    // Restore timestamp at the top
     if (timestampDiv) {
         sidebar.appendChild(timestampDiv);
     }
-    
-    container.innerHTML = '';
 
     for (let sheetName in data) {
         const chartId = 'chart_' + sheetName.replace(/\s+/g, '_');
@@ -172,7 +200,10 @@ async function fetchDataAndUpdateCharts() {
         // Double-click to reset zoom
         canvas.addEventListener('dblclick', function() {
             if (charts[chartId]) {
-                charts[chartId].resetZoom();
+                // Full reset - set both min and max to undefined
+                charts[chartId].options.scales.x.min = undefined;
+                charts[chartId].options.scales.x.max = undefined;
+                charts[chartId].update();
             }
         });
 
@@ -181,7 +212,12 @@ async function fetchDataAndUpdateCharts() {
         resetBtn.className = 'reset-zoom-btn';
         resetBtn.innerText = 'Reset Zoom';
         resetBtn.onclick = function() {
-            if (charts[chartId]) charts[chartId].resetZoom();
+            if (charts[chartId]) {
+                // Full reset - set both min and max to undefined
+                charts[chartId].options.scales.x.min = undefined;
+                charts[chartId].options.scales.x.max = undefined;
+                charts[chartId].update();
+            }
         };
         chartDiv.appendChild(resetBtn);
 
@@ -385,7 +421,6 @@ async function fetchDataAndUpdateCharts() {
                                 }
                                 return label;
                             },
-                            // Add footer callback to display timestamp when available
                             footer: function(tooltipItems) {
                                 // Get the chart and index
                                 const chart = tooltipItems[0].chart;
@@ -447,7 +482,6 @@ async function fetchDataAndUpdateCharts() {
                                 return ''; // Omit timestamp when not available
                             }
                         },
-                        // Add the vertical line on hover
                         external: function(context) {
                             // Get tooltip element
                             const tooltipEl = document.getElementById('chartjs-tooltip');
@@ -535,88 +569,74 @@ async function fetchDataAndUpdateCharts() {
         }
     } // End of for-loop
 
-    // AFTER all charts created, restore zooms
-    restoreAllZoomStates();
-
-    // THEN restore scroll
-    window.scrollTo(0, scrollPos);
-}
-
-/**
- * Updates the color of x-axis labels on an existing chart.
- * Call this after a chart update if you need to reapply coloring.
- * 
- * @param {string} chartId - The ID of the chart to update
- */
-function updateXAxisColors(chartId) {
-    const chart = charts[chartId];
-    if (!chart) return;
-    
-    // Get the original options
-    const originalOptions = chart.options.scales.x || {};
-    
-    // Update the color function
-    chart.options.scales.x = {
-        ...originalOptions,
-        ticks: {
-            ...originalOptions.ticks,
-            color: function(context) {
-                const tickValue = context.tick.value;
-                const allLabels = chart.data.labels;
+    // Apply saved zoom states for each chart
+    for (let chartId in charts) {
+        const chart = charts[chartId];
+        const savedState = currentZoomState[chartId];
+        
+        if (!chart || !savedState) continue;
+        
+        const newDataLength = chart.data.labels.length;
+        
+        try {
+            if (savedState.isViewingLatest) {
+                // If viewing the latest data, adjust the view to show the same number of points
+                // but shifted to include any new data points
+                const pointsToShow = savedState.pointsVisible;
+                const newMin = Math.max(0, newDataLength - pointsToShow);
                 
-                // Check if this label starts a new value group
-                const isNewValueGroup = (index) => {
-                    if (index === 0) return true;
-                    return allLabels[index] !== allLabels[index-1];
-                };
-                
-                // Count value group changes up to this index
-                let groupChangeCount = 0;
-                for (let i = 0; i <= tickValue; i++) {
-                    if (isNewValueGroup(i)) {
-                        groupChangeCount++;
-                    }
-                }
-                
-                // Alternate colors based on group number
-                return groupChangeCount % 2 === 0 ? 
-                    'rgb(75, 192, 75)' :  // Green for even groups
-                    'rgb(255, 99, 132)';  // Red for odd groups
-            },
-            font: {
-                ...originalOptions.ticks?.font,
-                weight: 'bold' // Make labels bold for better visibility
+                chart.options.scales.x.min = newMin;
+                chart.options.scales.x.max = newDataLength - 1;
+            } else {
+                // Otherwise, maintain the exact same view
+                chart.options.scales.x.min = savedState.min;
+                chart.options.scales.x.max = savedState.max;
             }
+            
+            // Update the chart
+            chart.update();
+            
+        } catch (error) {
+            console.error("Error restoring zoom state:", error);
+        }
+    }
+    
+    // More aggressive scroll restoration
+    const restoreScrollPosition = () => {
+        const scrollTarget = window.lastScrollPosition || scrollPosition || 
+                           parseInt(document.body.dataset.scrollPosition) || 0;
+                           
+        if (scrollTarget > 0) {
+            console.log("Restoring scroll to position:", scrollTarget);
+            window.scrollTo(0, scrollTarget);
+            document.documentElement.scrollTop = scrollTarget;
+            document.body.scrollTop = scrollTarget;
         }
     };
     
-    // Update the chart to apply changes
-    chart.update();
-}
-
-// Save zoom states before refresh
-function saveAllZoomStates() {
-    for (let chartId in charts) {
-        const chart = charts[chartId];
-        currentZoomState[chartId] = {
-            min: chart.scales.x.min,
-            max: chart.scales.x.max
-        };
-    }
-    currentZoomState['scrollPos'] = window.scrollY;
-}
-
-// Restore zoom states after refresh
-function restoreAllZoomStates() {
-    for (let chartId in charts) {
-        const chart = charts[chartId];
-        if (currentZoomState[chartId]) {
-            chart.options.scales.x.min = currentZoomState[chartId].min;
-            chart.options.scales.x.max = currentZoomState[chartId].max;
-            chart.update();
-            // Reapply x-axis coloring after restoring zoom state
-            updateXAxisColors(chartId);
-        }
+    // Try multiple approaches with increasing delays
+    setTimeout(restoreScrollPosition, 0);
+    setTimeout(restoreScrollPosition, 100);
+    setTimeout(restoreScrollPosition, 300);
+    setTimeout(restoreScrollPosition, 500);
+    setTimeout(restoreScrollPosition, 1000);
+    
+    // Add a scroll marker that won't be removed during chart reloading
+    if (!document.getElementById('scroll-marker')) {
+        const marker = document.createElement('div');
+        marker.id = 'scroll-marker';
+        marker.style.position = 'absolute';
+        marker.style.top = scrollPosition + 'px';
+        marker.style.left = '0';
+        marker.style.width = '1px';
+        marker.style.height = '1px';
+        marker.style.pointerEvents = 'none';
+        marker.style.opacity = '0';
+        document.body.appendChild(marker);
+    } else {
+        // Update existing marker position
+        const marker = document.getElementById('scroll-marker');
+        marker.style.top = scrollPosition + 'px';
     }
 }
 
@@ -659,14 +679,54 @@ document.head.insertAdjacentHTML('beforeend', `
 </style>
 `);
 
-// Initial load
-fetchDataAndUpdateCharts();
-
 // Auto-refresh every 5 minutes
-setInterval(async () => {
-    saveAllZoomStates();
-    await fetchDataAndUpdateCharts();
-}, 300000);
+let refreshTimer;
+
+function setupAutoRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    
+    refreshTimer = setInterval(() => {
+        console.log("Auto-refreshing at:", new Date().toLocaleTimeString());
+        fetchDataAndUpdateCharts();
+    }, 300000); // 5 minutes
+}
+
+// Initial load
+window.addEventListener('load', () => {
+    fetchDataAndUpdateCharts();
+    setupAutoRefresh();
+    
+    // Try to restore scroll position from previous page load
+    if (window.lastScrollPosition > 0) {
+        window.scrollTo(0, window.lastScrollPosition);
+    }
+});
+
+// This is more reliable than relying on browser scroll restoration
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted || window.lastScrollPosition > 0) {
+        window.scrollTo(0, window.lastScrollPosition || 0);
+    }
+});
+
+// Reset auto-refresh when tab becomes visible
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        setupAutoRefresh();
+        
+        // Also try to restore scroll position when tab becomes visible again
+        if (window.lastScrollPosition > 0) {
+            window.scrollTo(0, window.lastScrollPosition);
+        } else if (document.getElementById('scroll-marker')) {
+            // Try to get position from marker
+            const marker = document.getElementById('scroll-marker');
+            const position = parseInt(marker.style.top);
+            if (!isNaN(position) && position > 0) {
+                window.scrollTo(0, position);
+            }
+        }
+    }
+});
 
 // Clean up vertical line and tooltip when navigating away
 window.addEventListener('beforeunload', () => {
