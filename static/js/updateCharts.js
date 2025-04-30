@@ -270,6 +270,8 @@ async function fetchDataAndUpdateCharts() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                // This is critical for mobile touch handling
+                events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove', 'touchend'],
                 scales: {
                     x: {
                         title: {
@@ -382,10 +384,10 @@ async function fetchDataAndUpdateCharts() {
                             enabled: true,
                             mode: 'x',
                             overScaleMode: 'x',
-                            threshold: 10,  // Makes it easier to initiate pan on mobile
-                            speed: 10,      // Adjust pan speed
+                            threshold: 5,  // Lower threshold for easier activation on mobile
+                            speed: 20,     // Faster panning
                             modifierKey: null,  // Allow panning without modifier keys on mobile
-                            sensitivity: 3,   // Higher makes panning more sensitive
+                            sensitivity: 5,   // Higher sensitivity for mobile
                             wheel: {
                                 enabled: true,
                             },
@@ -644,32 +646,120 @@ async function fetchDataAndUpdateCharts() {
         marker.style.top = scrollPosition + 'px';
     }
     
-    // Call the function to enhance touch support for all canvases
+    // Enhanced touch support for all canvases
     enhanceTouchSupport();
+    
+    // Initialize Hammer.js directly on canvases
+    initializeHammerOnCanvases();
 }
 
 // Function to improve touch support for all canvas elements
 function enhanceTouchSupport() {
     const canvases = document.querySelectorAll('canvas');
     canvases.forEach(canvas => {
-        let isDragging = false;
+        // Make sure canvas has proper dimensions and is visible to touch events
+        canvas.style.touchAction = 'none';
+        canvas.style.msTounchAction = 'none';
+        canvas.style.webkitUserSelect = 'none';
+        canvas.style.userSelect = 'none';
         
+        // Direct touch event listeners
         canvas.addEventListener('touchstart', function(e) {
-            isDragging = true;
-            // Prevent default scrolling behavior when touching the chart
             e.preventDefault();
+            console.log('Touch start detected on canvas');
         }, { passive: false });
-        
-        canvas.addEventListener('touchend', function() {
-            isDragging = false;
-        });
         
         canvas.addEventListener('touchmove', function(e) {
-            if (isDragging) {
-                // Prevent default scrolling behavior during chart panning
-                e.preventDefault();
-            }
+            e.preventDefault();
+            console.log('Touch move detected on canvas');
         }, { passive: false });
+        
+        // Add a touch wrapper to ensure the element receives touch events
+        const parent = canvas.parentElement;
+        if (parent) {
+            parent.style.touchAction = 'none';
+            parent.style.msTounchAction = 'none';
+            parent.style.webkitUserSelect = 'none';
+            parent.style.userSelect = 'none';
+            
+            parent.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                console.log('Touch start detected on parent');
+            }, { passive: false });
+            
+            parent.addEventListener('touchmove', function(e) {
+                e.preventDefault();
+                console.log('Touch move detected on parent');
+            }, { passive: false });
+        }
+    });
+}
+
+// Function to initialize Hammer.js directly on the canvases
+function initializeHammerOnCanvases() {
+    if (typeof Hammer === 'undefined') {
+        console.error('Hammer.js is not loaded. Cannot initialize touch gestures.');
+        return;
+    }
+    
+    const canvases = document.querySelectorAll('canvas');
+    
+    canvases.forEach(canvas => {
+        // Create a new Hammer instance directly on the canvas
+        const hammerInstance = new Hammer(canvas);
+        
+        // Configure for horizontal panning
+        hammerInstance.get('pan').set({
+            direction: Hammer.DIRECTION_HORIZONTAL,
+            threshold: 5
+        });
+        
+        // Log events to debug
+        hammerInstance.on('panstart', function(e) {
+            console.log('Hammer pan start', e);
+        });
+        
+        hammerInstance.on('panmove', function(e) {
+            console.log('Hammer pan move', e);
+            // Find the corresponding Chart.js instance for this canvas
+            let chartId = null;
+            for (let id in charts) {
+                if (charts[id].canvas === canvas) {
+                    chartId = id;
+                    break;
+                }
+            }
+            
+            if (chartId && charts[chartId]) {
+                // Manually trigger pan in Chart.js based on Hammer movement
+                const chart = charts[chartId];
+                const deltaX = e.deltaX;
+                
+                // Get current view window
+                const min = chart.scales.x.min || 0;
+                const max = chart.scales.x.max || chart.data.labels.length - 1;
+                const range = max - min;
+                
+                // Calculate new position - move in opposite direction of pan
+                const pixelRatio = chart.currentDevicePixelRatio;
+                const canvasWidth = chart.width / pixelRatio;
+                const pixelsPerDataPoint = canvasWidth / range;
+                
+                // Calculate how many data points to move
+                const moveAmount = deltaX / pixelsPerDataPoint;
+                
+                // Set new min/max
+                chart.options.scales.x.min = min - moveAmount;
+                chart.options.scales.x.max = max - moveAmount;
+                
+                // Update chart
+                chart.update('none'); // No animation for smoother panning
+            }
+        });
+        
+        hammerInstance.on('panend', function(e) {
+            console.log('Hammer pan end', e);
+        });
     });
 }
 
@@ -711,10 +801,20 @@ document.head.insertAdjacentHTML('beforeend', `
     }
     /* Add touch-specific CSS for better mobile experience */
     canvas {
-        touch-action: none; /* Prevents browser handling of touch gestures */
+        touch-action: none !important;
+        -ms-touch-action: none !important;
+        -webkit-user-select: none !important;
+        user-select: none !important;
     }
+    
     .chart-container {
-        -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+        touch-action: none !important;
+        -ms-touch-action: none !important;
+        overflow: visible !important;
+        -webkit-tap-highlight-touch-action: none !important;
+        -ms-touch-action: none !important;
+        overflow: visible !important;
+        -webkit-tap-highlight-color: transparent;
     }
 </style>
 `);
