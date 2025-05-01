@@ -660,8 +660,9 @@ document.head.insertAdjacentHTML('beforeend', `
         transition: background-color 0.2s;
     }
     
+    /* Added hover effect - this is the only change */
     #sidebar a:hover {
-        background-color: #f0f0f0;
+        background-color: #e0e0e0;
     }
     
     /* Sheet name styles */
@@ -680,7 +681,7 @@ document.head.insertAdjacentHTML('beforeend', `
         display: flex;
         justify-content: flex-start;
         width: 180px; /* Fixed width for the stats container */
-        margin-left: 2px; /* This creates the minimum gap */
+        margin-left: 4px; /* This creates the minimum gap */
         flex-shrink: 0; /* Prevents the stats from shrinking */
     }
     
