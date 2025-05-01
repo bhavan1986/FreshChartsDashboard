@@ -700,6 +700,7 @@ document.head.insertAdjacentHTML('beforeend', `
     .latest-rv {
         width: 65px; /* Fixed width for RV column */
         text-align: left;
+		margin-left: 4px;
     }
     
     /* Timestamp display at top of sidebar */
