@@ -42,6 +42,141 @@ async function fetchRunLogTimestamp() {
     }
 }
 
+// Function to create the search bar
+function createSearchBar(sidebar) {
+    // Create search container
+    const searchContainer = document.createElement('div');
+    searchContainer.id = 'search-container';
+    searchContainer.style.position = 'relative';
+    searchContainer.style.padding = '10px';
+    searchContainer.style.marginBottom = '10px';
+    searchContainer.style.borderBottom = '1px solid #ccc';
+    searchContainer.style.backgroundColor = '#f8f9fa';
+    
+    // Create search input
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.id = 'chart-search';
+    searchInput.placeholder = 'Search charts...';
+    searchInput.style.width = '100%';
+    searchInput.style.padding = '8px 30px 8px 10px';
+    searchInput.style.border = '1px solid #ddd';
+    searchInput.style.borderRadius = '4px';
+    searchInput.style.fontSize = '14px';
+    
+    // Add clear button
+    const clearButton = document.createElement('button');
+    clearButton.id = 'clear-search';
+    clearButton.innerHTML = '&times;';
+    clearButton.style.position = 'absolute';
+    clearButton.style.right = '15px';
+    clearButton.style.top = '50%';
+    clearButton.style.transform = 'translateY(-50%)';
+    clearButton.style.background = 'none';
+    clearButton.style.border = 'none';
+    clearButton.style.color = '#999';
+    clearButton.style.fontSize = '18px';
+    clearButton.style.cursor = 'pointer';
+    clearButton.style.padding = '0';
+    clearButton.style.margin = '0';
+    clearButton.style.height = '20px';
+    clearButton.style.width = '20px';
+    clearButton.style.lineHeight = '20px';
+    clearButton.style.textAlign = 'center';
+    clearButton.style.display = 'none'; // Initially hidden
+    
+    // Add event listeners
+    searchInput.addEventListener('input', filterCharts);
+    clearButton.addEventListener('click', clearSearch);
+    
+    // Add components to container
+    searchContainer.appendChild(searchInput);
+    searchContainer.appendChild(clearButton);
+    
+    // Add search container to sidebar after the timestamp
+    const timestampDiv = document.getElementById('latest-timestamp-display');
+    if (timestampDiv && timestampDiv.nextSibling) {
+        sidebar.insertBefore(searchContainer, timestampDiv.nextSibling);
+    } else if (timestampDiv) {
+        sidebar.insertBefore(searchContainer, sidebar.firstChild.nextSibling);
+    } else {
+        sidebar.insertBefore(searchContainer, sidebar.firstChild);
+    }
+}
+
+// Function to filter charts based on search
+function filterCharts() {
+    const searchInput = document.getElementById('chart-search');
+    const clearButton = document.getElementById('clear-search');
+    const searchTerm = searchInput.value.toLowerCase();
+    const chartLinks = document.querySelectorAll('#sidebar a');
+    
+    // Show/hide clear button
+    clearButton.style.display = searchTerm ? 'block' : 'none';
+    
+    // Filter the chart links
+    let visibleCount = 0;
+    chartLinks.forEach(link => {
+        // Skip if it's part of search UI
+        if (link.closest('#search-container')) return;
+        
+        const sheetName = link.querySelector('.sheet-name');
+        if (!sheetName) return;
+        
+        const text = sheetName.textContent.toLowerCase();
+        const match = text.includes(searchTerm);
+        
+        link.style.display = match ? 'flex' : 'none';
+        if (match) visibleCount++;
+    });
+    
+    // Optionally add a "no results" message
+    let noResultsMsg = document.getElementById('no-search-results');
+    if (searchTerm && visibleCount === 0) {
+        if (!noResultsMsg) {
+            noResultsMsg = document.createElement('div');
+            noResultsMsg.id = 'no-search-results';
+            noResultsMsg.style.padding = '10px';
+            noResultsMsg.style.textAlign = 'center';
+            noResultsMsg.style.color = '#666';
+            noResultsMsg.style.fontStyle = 'italic';
+            noResultsMsg.textContent = 'No matching charts found';
+            const searchContainer = document.getElementById('search-container');
+            searchContainer.parentNode.insertBefore(noResultsMsg, searchContainer.nextSibling);
+        }
+        noResultsMsg.style.display = 'block';
+    } else if (noResultsMsg) {
+        noResultsMsg.style.display = 'none';
+    }
+}
+
+// Function to clear the search
+function clearSearch() {
+    const searchInput = document.getElementById('chart-search');
+    const clearButton = document.getElementById('clear-search');
+    
+    // Clear input and hide button
+    searchInput.value = '';
+    clearButton.style.display = 'none';
+    
+    // Show all chart links
+    const chartLinks = document.querySelectorAll('#sidebar a');
+    chartLinks.forEach(link => {
+        if (!link.closest('#search-container')) {
+            link.style.display = 'flex';
+        }
+    });
+    
+    // Hide the no results message if it exists
+    const noResultsMsg = document.getElementById('no-search-results');
+    if (noResultsMsg) {
+        noResultsMsg.style.display = 'none';
+    }
+    
+    // Focus back on search input
+    searchInput.focus();
+}
+
 async function fetchDataAndUpdateCharts() {
     // Record current scroll position - this is critical
     const scrollPosition = window.scrollY;
@@ -79,6 +214,13 @@ async function fetchDataAndUpdateCharts() {
     const sidebar = document.getElementById('sidebar');
     const container = document.getElementById('charts-container');
 
+    // Remember search value if it exists
+    let searchValue = '';
+    const searchInput = document.getElementById('chart-search');
+    if (searchInput) {
+        searchValue = searchInput.value;
+    }
+    
     // Remember the timestamp element
     const timestampDiv = document.getElementById('latest-timestamp-display');
     
@@ -90,8 +232,20 @@ async function fetchDataAndUpdateCharts() {
     if (timestampDiv) {
         sidebar.appendChild(timestampDiv);
     }
-
-    for (let sheetName in data) {
+    
+    // Add search bar after timestamp
+    createSearchBar(sidebar);
+    
+    // Restore search value if there was one
+    if (searchValue) {
+        const newSearchInput = document.getElementById('chart-search');
+        if (newSearchInput) {
+            newSearchInput.value = searchValue;
+            // Trigger filtering
+            filterCharts();
+        }
+    }
+	for (let sheetName in data) {
         const chartId = 'chart_' + sheetName.replace(/\s+/g, '_');
 
         // Get the data for this chart
@@ -135,20 +289,20 @@ async function fetchDataAndUpdateCharts() {
         const rvValueColor = rvValue !== null ? (rvValue >= 0 ? 'green' : 'red') : 'red';
 		
 		// Determine color for the T- value based on the number
-				let xValueColor = 'yellow'; // Default color
-				if (latestX !== '') {
-					// Try to convert to a number
-					const xNum = parseInt(latestX);
-					if (!isNaN(xNum)) {
-						if (xNum > 6) {
-							xValueColor = 'green';
-						} else if (xNum >= 4) {
-							xValueColor = 'darkorange'; // More readable than yellow on gray background
-						} else {
-							xValueColor = 'red';
-						}
-					}
+		let xValueColor = 'yellow'; // Default color
+		if (latestX !== '') {
+			// Try to convert to a number
+			const xNum = parseInt(latestX);
+			if (!isNaN(xNum)) {
+				if (xNum > 6) {
+					xValueColor = 'green';
+				} else if (xNum >= 4) {
+					xValueColor = 'darkorange'; // More readable than yellow on gray background
+				} else {
+					xValueColor = 'red';
 				}
+			}
+		}
 
         // Create sidebar item with data on the right side
         const link = document.createElement('a');
@@ -608,7 +762,7 @@ async function fetchDataAndUpdateCharts() {
         if (scrollTarget > 0) {
             console.log("Restoring scroll to position:", scrollTarget);
             window.scrollTo(0, scrollTarget);
-            document.documentElement.scrollTop = scrollTarget;
+			document.documentElement.scrollTop = scrollTarget;
             document.body.scrollTop = scrollTarget;
         }
     };
