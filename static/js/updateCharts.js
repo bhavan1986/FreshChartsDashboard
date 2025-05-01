@@ -165,8 +165,8 @@ async function fetchDataAndUpdateCharts() {
         const statsSpan = document.createElement('span');
         statsSpan.className = 'chart-stats';
         statsSpan.innerHTML = `
-            <span class="latest-x">T - <span style="color: ${xValueColor}">${latestX}</span></span> | 
-            <span class="latest-pl">P/L: <b style="color: ${plValueColor}">${formattedY1}</b></span> | 
+            <span class="latest-x">T- <span style="color: ${xValueColor}">${latestX}</span></span>
+            <span class="latest-pl">P/L: <b style="color: ${plValueColor}">${formattedY1}</b></span>
             <span class="latest-rv">RV: <b style="color: ${rvValueColor}">${formattedY3}</b></span>
         `;
         
@@ -654,16 +654,23 @@ document.head.insertAdjacentHTML('beforeend', `
         line-height: 1.2;
         text-align: right;
         white-space: nowrap;
+        display: flex;
+        justify-content: flex-start;
+        width: 180px; /* Fixed width for the stats container */
     }
     .latest-x {
-        font-weight: bold;
-        color: blue;
+        width: 45px; /* Fixed width for T- column */
+        text-align: left;
+        margin-right: 5px;
     }
     .latest-pl {
-        color: blue;
+        width: 65px; /* Fixed width for P/L column */
+        text-align: left;
+        margin-right: 5px;
     }
     .latest-rv {
-        color: blue;
+        width: 65px; /* Fixed width for RV column */
+        text-align: left;
     }
     /* Timestamp display at top of sidebar */
     .latest-timestamp {
