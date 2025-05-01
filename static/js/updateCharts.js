@@ -694,7 +694,7 @@ document.head.insertAdjacentHTML('beforeend', `
     .latest-pl {
         width: 65px; /* Fixed width for P/L column */
         text-align: left;
-        margin-right: 8px;
+        margin-right: 12px;
     }
     
     .latest-rv {
