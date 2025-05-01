@@ -162,13 +162,13 @@ async function fetchDataAndUpdateCharts() {
         nameSpan.textContent = sheetName;
         
         // Right side - stats display
-        const statsSpan = document.createElement('span');
-        statsSpan.className = 'chart-stats';
-        statsSpan.innerHTML = `
-            <span class="latest-x">T- <span style="color: ${xValueColor}">${latestX}</span></span>
-            <span class="latest-pl">P/L: <b style="color: ${plValueColor}">${formattedY1}</b></span>
-            <span class="latest-rv">RV: <b style="color: ${rvValueColor}">${formattedY3}</b></span>
-        `;
+const statsSpan = document.createElement('span');
+statsSpan.className = 'chart-stats';
+statsSpan.innerHTML = `
+    <span class="latest-x"><b>T-</b> <span style="color: ${xValueColor}">${latestX}</span></span>
+    <span class="latest-pl"><b>P/L:</b> <span style="color: ${plValueColor}">${formattedY1}</span></span>
+    <span class="latest-rv"><b>RV:</b> <span style="color: ${rvValueColor}">${formattedY3}</span></span>
+`;
         
         // Add both spans to the link
         link.appendChild(nameSpan);
@@ -661,16 +661,19 @@ document.head.insertAdjacentHTML('beforeend', `
     .latest-x {
         width: 45px; /* Fixed width for T- column */
         text-align: left;
-        margin-right: 5px;
+        margin-right: 4px;
+		
     }
     .latest-pl {
         width: 65px; /* Fixed width for P/L column */
         text-align: left;
-        margin-right: 5px;
+        margin-right: 8px;
+		
     }
     .latest-rv {
         width: 65px; /* Fixed width for RV column */
         text-align: left;
+		
     }
     /* Timestamp display at top of sidebar */
     .latest-timestamp {
