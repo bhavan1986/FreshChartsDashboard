@@ -659,9 +659,9 @@ document.head.insertAdjacentHTML('beforeend', `
         width: 180px; /* Fixed width for the stats container */
     }
     .latest-x {
-        width: 45px; /* Fixed width for T- column */
+        width: 25px; /* Fixed width for T- column */
         text-align: left;
-        margin-right: 4px;
+        margin-right: 8px;
 		
     }
     .latest-pl {
