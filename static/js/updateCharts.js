@@ -157,18 +157,19 @@ async function fetchDataAndUpdateCharts() {
         link.style.justifyContent = 'space-between';
         link.style.alignItems = 'center';
         
-        // Left side - just the sheet name
+        // Left side - sheet name with class
         const nameSpan = document.createElement('span');
         nameSpan.textContent = sheetName;
+        nameSpan.className = 'sheet-name'; // Add this class
         
         // Right side - stats display
-const statsSpan = document.createElement('span');
-statsSpan.className = 'chart-stats';
-statsSpan.innerHTML = `
-    <span class="latest-x"><b>T-</b> <span style="color: ${xValueColor}">${latestX}</span></span>
-    <span class="latest-pl"><b>P/L:</b> <span style="color: ${plValueColor}">${formattedY1}</span></span>
-    <span class="latest-rv"><b>RV:</b> <span style="color: ${rvValueColor}">${formattedY3}</span></span>
-`;
+        const statsSpan = document.createElement('span');
+        statsSpan.className = 'chart-stats';
+        statsSpan.innerHTML = `
+            <span class="latest-x"><b>T-</b> <span style="color: ${xValueColor}">${latestX}</span></span>
+            <span class="latest-pl"><b>P/L:</b> <span style="color: ${plValueColor}">${formattedY1}</span></span>
+            <span class="latest-rv"><b>RV:</b> <span style="color: ${rvValueColor}">${formattedY3}</span></span>
+        `;
         
         // Add both spans to the link
         link.appendChild(nameSpan);
@@ -648,33 +649,58 @@ document.head.insertAdjacentHTML('beforeend', `
     #chartjs-tooltip {
         transition: opacity 0.2s ease;
     }
+    
+    /* Updated sidebar styles */
+    #sidebar a {
+        display: flex;
+        justify-content: space-between;
+        align-items: left;
+        padding: 0px 0px;
+        border-bottom: 1px solid #eee;
+        transition: background-color 0.2s;
+    }
+    
+    #sidebar a:hover {
+        background-color: #f0f0f0;
+    }
+    
+    /* Sheet name styles */
+    .sheet-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: calc(100% - 150px);
+    }
+    
     /* Chart stats in sidebar */
     .chart-stats {
         font-size: 12px;
-        line-height: 1.2;
-        text-align: right;
+        line-height: 1;
         white-space: nowrap;
         display: flex;
         justify-content: flex-start;
         width: 180px; /* Fixed width for the stats container */
+        margin-left: 2px; /* This creates the minimum gap */
+        flex-shrink: 0; /* Prevents the stats from shrinking */
     }
+    
     .latest-x {
         width: 25px; /* Fixed width for T- column */
         text-align: left;
         margin-right: 8px;
-		
     }
+    
     .latest-pl {
         width: 65px; /* Fixed width for P/L column */
         text-align: left;
         margin-right: 8px;
-		
     }
+    
     .latest-rv {
         width: 65px; /* Fixed width for RV column */
         text-align: left;
-		
     }
+    
     /* Timestamp display at top of sidebar */
     .latest-timestamp {
         padding: 10px;
