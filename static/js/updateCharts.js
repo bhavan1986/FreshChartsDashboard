@@ -919,7 +919,7 @@ function setupAutoRefresh() {
         } else {
             console.log("Outside market hours, skipping refresh at:", new Date().toLocaleTimeString());
         }
-    }, 30000); // Check every 5 minutes
+    }, 300000); // Check every 5 minutes
 }
 
 // Initial load
