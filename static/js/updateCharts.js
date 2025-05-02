@@ -877,13 +877,49 @@ document.head.insertAdjacentHTML('beforeend', `
 // Auto-refresh every 5 minutes
 let refreshTimer;
 
-function setupAutoRefresh() {
+/*function setupAutoRefresh() {
     if (refreshTimer) clearInterval(refreshTimer);
     
     refreshTimer = setInterval(() => {
         console.log("Auto-refreshing at:", new Date().toLocaleTimeString());
         fetchDataAndUpdateCharts();
     }, 300000); // 5 minutes
+}*/
+
+function setupAutoRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    
+    // Check every minute if we should refresh the data
+    refreshTimer = setInterval(() => {
+        // Get current date in EST timezone
+        const now = new Date();
+        // Convert to EST by adding the offset (-5 hours from UTC during standard time, -4 during daylight saving)
+        // Note: This is a simplified approach, a more robust solution would use a library like date-fns-tz
+        const estOffset = -4; // -4 hours during daylight saving time (March to November)
+        const utcHours = now.getUTCHours();
+        const estHours = (utcHours + estOffset + 24) % 24;
+        
+        // Get day of week (0 = Sunday, 1 = Monday, ..., 5 = Friday, 6 = Saturday)
+        const dayOfWeek = now.getUTCDay();
+        
+        // Check if current time is a weekday (Monday-Friday)
+        const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+        
+        // Get minutes for checking if we're past 9:30 AM
+        const estMinutes = now.getUTCMinutes();
+        
+        // Check if current time is between 9:30 AM and 4:00 PM EST
+        const isMarketHours = isWeekday && 
+                             ((estHours === 9 && estMinutes >= 30) || // 9:30 AM or later
+                              (estHours > 9 && estHours < 16));       // 10 AM to 3:59 PM
+        
+        if (isMarketHours) {
+            console.log("Auto-refreshing at:", new Date().toLocaleTimeString());
+            fetchDataAndUpdateCharts();
+        } else {
+            console.log("Outside market hours, skipping refresh at:", new Date().toLocaleTimeString());
+        }
+    }, 30000); // Check every 5 minutes
 }
 
 // Initial load
