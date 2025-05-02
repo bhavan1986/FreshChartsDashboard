@@ -920,7 +920,11 @@ let refreshTimer;
 function setupAutoRefresh() {
     if (refreshTimer) clearInterval(refreshTimer);
     
-    // Check every minute if we should refresh the data
+    // Log when the next refresh attempt will be
+    const nextRefreshTime = new Date(Date.now() + 300000); // 5 minutes from now
+    console.log("Next refresh attempt will be at:", nextRefreshTime.toLocaleTimeString());
+    
+    // Check every 5 minutes if we should refresh the data
     refreshTimer = setInterval(() => {
         // Get current date in EST timezone
         const now = new Date();
@@ -949,7 +953,11 @@ function setupAutoRefresh() {
             fetchDataAndUpdateCharts();
         } else {
             console.log("Outside market hours, skipping refresh at:", new Date().toLocaleTimeString());
-		}
+        }
+        
+        // Log when the next refresh attempt will be
+        const nextRefreshTime = new Date(Date.now() + 300000); // 5 minutes from now
+        console.log("Next refresh attempt will be at:", nextRefreshTime.toLocaleTimeString());
     }, 300000); // Check every 5 minutes
 }
 
