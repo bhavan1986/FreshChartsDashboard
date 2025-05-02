@@ -1,5 +1,10 @@
 let charts = {};
 let currentZoomState = {};
+let scrollPositions = {
+    main: 0,
+    sidebar: 0,
+    chartsContainer: 0
+};
 
 // Function to fetch and display the RunLog timestamp
 async function fetchRunLogTimestamp() {
@@ -177,10 +182,64 @@ function clearSearch() {
     searchInput.focus();
 }
 
+// Save all scroll positions before refreshing data
+function saveAllScrollPositions() {
+    // Main window scroll position
+    scrollPositions.main = window.scrollY;
+    
+    // Sidebar scroll position
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+        scrollPositions.sidebar = sidebar.scrollTop;
+    }
+    
+    // Charts container scroll position
+    const chartsContainer = document.getElementById('charts-container');
+    if (chartsContainer) {
+        scrollPositions.chartsContainer = chartsContainer.scrollTop;
+    }
+    
+    // Save to localStorage as backup
+    localStorage.setItem('scrollPositions', JSON.stringify(scrollPositions));
+    
+    console.log("Saved scroll positions:", scrollPositions);
+}
+
+// Restore all scroll positions after data refresh
+function restoreAllScrollPositions() {
+    // Try to get from localStorage if needed
+    const savedPositions = localStorage.getItem('scrollPositions');
+    if (savedPositions && (!scrollPositions.main && !scrollPositions.sidebar && !scrollPositions.chartsContainer)) {
+        try {
+            scrollPositions = JSON.parse(savedPositions);
+        } catch (e) {
+            console.error("Error parsing saved scroll positions:", e);
+        }
+    }
+    
+    console.log("Restoring scroll positions:", scrollPositions);
+    
+    // Restore main window scroll
+    if (scrollPositions.main > 0) {
+        window.scrollTo(0, scrollPositions.main);
+    }
+    
+    // Restore sidebar scroll
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && scrollPositions.sidebar > 0) {
+        sidebar.scrollTop = scrollPositions.sidebar;
+    }
+    
+    // Restore charts container scroll
+    const chartsContainer = document.getElementById('charts-container');
+    if (chartsContainer && scrollPositions.chartsContainer > 0) {
+        chartsContainer.scrollTop = scrollPositions.chartsContainer;
+    }
+}
+
 async function fetchDataAndUpdateCharts() {
-    // Record current scroll position - this is critical
-    const scrollPosition = window.scrollY;
-    console.log("Initial scroll position:", scrollPosition);
+    // Save all scroll positions before updating
+    saveAllScrollPositions();
     
     // Save current zoom states for all charts
     for (let chartId in charts) {
@@ -201,8 +260,8 @@ async function fetchDataAndUpdateCharts() {
     }
     
     // Store scroll position in global variable that persists through refresh
-    window.lastScrollPosition = scrollPosition;
-    document.body.dataset.scrollPosition = scrollPosition;
+    window.lastScrollPosition = scrollPositions.main;
+    document.body.dataset.scrollPosition = scrollPositions.main;
     
     // Fetch timestamp
     await fetchRunLogTimestamp();
@@ -236,13 +295,23 @@ async function fetchDataAndUpdateCharts() {
     // Add search bar after timestamp
     createSearchBar(sidebar);
     
-    // Restore search value if there was one
+    // Restore search value if there was one and trigger filtering
     if (searchValue) {
         const newSearchInput = document.getElementById('chart-search');
         if (newSearchInput) {
             newSearchInput.value = searchValue;
-            // Trigger filtering
-            filterCharts();
+            
+            // Show the clear button if there's a search value
+            const clearButton = document.getElementById('clear-search');
+            if (clearButton) {
+                clearButton.style.display = 'block';
+            }
+            
+            // Ensure the DOM is ready before filtering
+            setTimeout(() => {
+                filterCharts();
+                console.log("Re-applied search filter for:", searchValue);
+            }, 50);
         }
     }
 	for (let sheetName in data) {
@@ -759,43 +828,14 @@ async function fetchDataAndUpdateCharts() {
         }
     }
     
-    // More aggressive scroll restoration
-    const restoreScrollPosition = () => {
-        const scrollTarget = window.lastScrollPosition || scrollPosition || 
-                           parseInt(document.body.dataset.scrollPosition) || 0;
-                           
-        if (scrollTarget > 0) {
-            console.log("Restoring scroll to position:", scrollTarget);
-            window.scrollTo(0, scrollTarget);
-			document.documentElement.scrollTop = scrollTarget;
-            document.body.scrollTop = scrollTarget;
-        }
-    };
+    // Restore all scroll positions with multiple attempts
+    restoreAllScrollPositions();
     
     // Try multiple approaches with increasing delays
-    setTimeout(restoreScrollPosition, 0);
-    setTimeout(restoreScrollPosition, 100);
-    setTimeout(restoreScrollPosition, 300);
-    setTimeout(restoreScrollPosition, 500);
-    setTimeout(restoreScrollPosition, 1000);
-    
-    // Add a scroll marker that won't be removed during chart reloading
-    if (!document.getElementById('scroll-marker')) {
-        const marker = document.createElement('div');
-        marker.id = 'scroll-marker';
-        marker.style.position = 'absolute';
-        marker.style.top = scrollPosition + 'px';
-        marker.style.left = '0';
-        marker.style.width = '1px';
-        marker.style.height = '1px';
-        marker.style.pointerEvents = 'none';
-        marker.style.opacity = '0';
-        document.body.appendChild(marker);
-    } else {
-        // Update existing marker position
-        const marker = document.getElementById('scroll-marker');
-        marker.style.top = scrollPosition + 'px';
-    }
+    setTimeout(restoreAllScrollPositions, 100);
+    setTimeout(restoreAllScrollPositions, 300);
+    setTimeout(restoreAllScrollPositions, 500);
+    setTimeout(restoreAllScrollPositions, 1000);
 }
 
 // Add CSS for vertical line, tooltip, and sidebar chart stats
@@ -877,15 +917,6 @@ document.head.insertAdjacentHTML('beforeend', `
 // Auto-refresh every 5 minutes
 let refreshTimer;
 
-/*function setupAutoRefresh() {
-    if (refreshTimer) clearInterval(refreshTimer);
-    
-    refreshTimer = setInterval(() => {
-        console.log("Auto-refreshing at:", new Date().toLocaleTimeString());
-        fetchDataAndUpdateCharts();
-    }, 300000); // 5 minutes
-}*/
-
 function setupAutoRefresh() {
     if (refreshTimer) clearInterval(refreshTimer);
     
@@ -918,7 +949,7 @@ function setupAutoRefresh() {
             fetchDataAndUpdateCharts();
         } else {
             console.log("Outside market hours, skipping refresh at:", new Date().toLocaleTimeString());
-        }
+		}
     }, 300000); // Check every 5 minutes
 }
 
@@ -927,16 +958,39 @@ window.addEventListener('load', () => {
     fetchDataAndUpdateCharts();
     setupAutoRefresh();
     
-    // Try to restore scroll position from previous page load
-    if (window.lastScrollPosition > 0) {
-        window.scrollTo(0, window.lastScrollPosition);
+    // Listen for scroll events to continuously track positions
+    window.addEventListener('scroll', function() {
+        scrollPositions.main = window.scrollY;
+    });
+    
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+        sidebar.addEventListener('scroll', function() {
+            scrollPositions.sidebar = sidebar.scrollTop;
+        });
+    }
+    
+    const chartsContainer = document.getElementById('charts-container');
+    if (chartsContainer) {
+        chartsContainer.addEventListener('scroll', function() {
+            scrollPositions.chartsContainer = chartsContainer.scrollTop;
+        });
     }
 });
 
 // This is more reliable than relying on browser scroll restoration
 window.addEventListener('pageshow', (event) => {
-    if (event.persisted || window.lastScrollPosition > 0) {
-        window.scrollTo(0, window.lastScrollPosition || 0);
+    if (event.persisted) {
+        // Try to restore from localStorage first
+        const savedPositions = localStorage.getItem('scrollPositions');
+        if (savedPositions) {
+            try {
+                scrollPositions = JSON.parse(savedPositions);
+                restoreAllScrollPositions();
+            } catch (e) {
+                console.error("Error parsing saved scroll positions on pageshow:", e);
+            }
+        }
     }
 });
 
@@ -945,22 +999,17 @@ document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
         setupAutoRefresh();
         
-        // Also try to restore scroll position when tab becomes visible again
-        if (window.lastScrollPosition > 0) {
-            window.scrollTo(0, window.lastScrollPosition);
-        } else if (document.getElementById('scroll-marker')) {
-            // Try to get position from marker
-            const marker = document.getElementById('scroll-marker');
-            const position = parseInt(marker.style.top);
-            if (!isNaN(position) && position > 0) {
-                window.scrollTo(0, position);
-            }
-        }
+        // Also try to restore scroll positions when tab becomes visible again
+        restoreAllScrollPositions();
     }
 });
 
-// Clean up vertical line and tooltip when navigating away
+// Save scroll positions before navigating away
 window.addEventListener('beforeunload', () => {
+    // Save current scroll positions to localStorage
+    saveAllScrollPositions();
+    
+    // Clean up vertical line and tooltip
     const verticalLine = document.getElementById('chartjs-vertical-line');
     const tooltip = document.getElementById('chartjs-tooltip');
     
