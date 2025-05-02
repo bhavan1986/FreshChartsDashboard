@@ -345,7 +345,12 @@ async function fetchDataAndUpdateCharts() {
         // N1:P3 Box
         const n1p3Div = document.createElement('div');
         n1p3Div.className = 'n1p3-box';
-        n1p3Div.innerHTML = data[sheetName].n1p3.map(row => row.join(' | ')).join('<br>');
+		
+		// Log the raw data to see what's there
+		console.log("N1P3 data for " + sheetName + ":", data[sheetName].n1p3);
+
+		// Add row numbers to see what's being shown
+		n1p3Div.innerHTML = data[sheetName].n1p3.map(row => row.join(' | ')).join('<br>');
         chartDiv.appendChild(n1p3Div);
 
         // Canvas
