@@ -58,7 +58,7 @@ function createSearchBar(sidebar) {
     searchInput.type = 'text';
     searchInput.id = 'chart-search';
     searchInput.placeholder = 'Search charts...';
-    searchInput.style.width = '100%';
+    searchInput.style.width = '80%';
     searchInput.style.padding = '8px 30px 8px 10px';
     searchInput.style.border = '1px solid #ddd';
     searchInput.style.borderRadius = '4px';
