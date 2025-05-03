@@ -71,6 +71,8 @@ function createSearchBar(sidebar) {
         fixedContainer.style.backgroundColor = '#f2f2f2';
         fixedContainer.style.width = '100%';
         fixedContainer.style.borderBottom = '1px solid #ddd';
+        fixedContainer.style.margin = '0';
+        fixedContainer.style.padding = '0';
         
         // Add the timestamp to this container if it exists
         const timestampDiv = document.getElementById('latest-timestamp-display');
@@ -440,6 +442,8 @@ async function fetchDataAndUpdateCharts() {
         link.style.display = 'flex';
         link.style.justifyContent = 'space-between';
         link.style.alignItems = 'center';
+        link.style.padding = '4px 4px'; // Added left/right padding
+        link.style.marginBottom = '2px'; // Add spacing between items
         
         // Left side - sheet name with class
         const nameSpan = document.createElement('span');
@@ -902,118 +906,6 @@ async function fetchDataAndUpdateCharts() {
     setTimeout(restoreAllScrollPositions, 500);
     setTimeout(restoreAllScrollPositions, 1000);
 }
-
-// Add CSS for vertical line, tooltip, and sidebar chart stats
-document.head.insertAdjacentHTML('beforeend', `
-<style>
-    #chartjs-vertical-line {
-        pointer-events: none;
-        transition: opacity 0.2s ease;
-    }
-    #chartjs-tooltip {
-        transition: opacity 0.2s ease;
-    }
-    
-    /* Updated sidebar styles */
-    #sidebar a {
-        display: flex;
-        justify-content: space-between;
-        align-items: left;
-        padding: 0px 2.5px;
-        border-bottom: 1px solid #eee;
-        transition: background-color 0.2s;
-    }
-    
-    /* Added hover effect - this is the only change */
-    #sidebar a:hover {
-        background-color: #e0e0e0;
-    }
-    
-    /* Sheet name styles */
-    .sheet-name {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: calc(100% - 150px);
-    }
-    
-    /* Chart stats in sidebar */
-    .chart-stats {
-        font-size: 12px;
-        line-height: 1;
-        white-space: nowrap;
-        display: flex;
-        justify-content: flex-start;
-        width: 180px; /* Fixed width for the stats container */
-        margin-left: 4px; /* This creates the minimum gap */
-        flex-shrink: 0; /* Prevents the stats from shrinking */
-    }
-    
-    .latest-x {
-        width: 25px; /* Fixed width for T- column */
-        text-align: left;
-        margin-right: 8px;
-    }
-    
-    .latest-pl {
-        width: 65px; /* Fixed width for P/L column */
-        text-align: left;
-        margin-right: 12px;
-    }
-    
-    .latest-rv {
-        width: 65px; /* Fixed width for RV column */
-        text-align: left;
-		margin-left: 4px;
-    }
-    
-    /* Timestamp display at top of sidebar */
-    .latest-timestamp {
-        padding: 10px;
-        margin-bottom: 10px;
-        border-bottom: 1px solid #ccc;
-        font-weight: bold;
-        text-align: center;
-        background-color: #f8f9fa;
-    }
-    
-    /* Fixed sidebar container styles */
-    #fixed-sidebar-elements {
-        position: sticky;
-        top: 0;
-        z-index: 20;
-        background-color: #f2f2f2;
-        width: 100%;
-        border-bottom: 1px solid #ddd;
-        margin: 0;
-        padding: 0;
-    }
-    
-    /* Ensure the scrollable area of the sidebar starts below the fixed elements */
-    #sidebar {
-        display: flex;
-        flex-direction: column;
-        padding-top: 0;
-        margin-top: 0;
-    }
-    
-    /* Ensure fixed container is at the very top with no gaps */
-    #sidebar > #fixed-sidebar-elements {
-        margin-top: 0;
-        padding-top: 0;
-    }
-    
-    /* Add spacing after fixed container */
-    #sidebar > a:first-of-type {
-        margin-top: 10px;
-    }
-    
-    /* Override the default padding of the sidebar */
-    .sidebar {
-        padding: 0 !important;
-    }
-</style>
-`);
 
 // Auto-refresh every 5 minutes
 let refreshTimer;

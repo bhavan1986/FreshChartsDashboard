@@ -1,46 +1,57 @@
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    overflow-y: auto; /* Enable main window scroll */
+    overflow: hidden; /* Prevent outer body scrollbar */
+    height: 100vh;
 }
 
 .container {
     display: flex;
     height: 100vh;
+    min-height: 100vh;
+    overflow: hidden; /* Prevent container scrollbar */
 }
 
 .sidebar {
     width: 350px;
     overflow-y: auto; /* Enable sidebar scroll */
     background-color: #f2f2f2;
-    padding: 10px;
+    padding: 0; /* Remove padding to prevent unwanted spacing */
     border-right: 1px solid #ccc;
     position: -webkit-sticky; /* For Safari */
     position: sticky;
     top: 0;
     height: 100vh; /* Full height */
     box-sizing: border-box;
+    flex-shrink: 0; /* Prevent sidebar from shrinking */
 }
 
 .sidebar a {
-    display: block;
-    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2px; /* Add spacing between chart list items */
     color: #333;
     text-decoration: none;
     font-size: 14px;
-    padding: 8px 10px; /* Added padding for better clickability */
-    border-radius: 4px; /* Rounded corners for better appearance */
+    padding: 8px 10px; /* Added left/right padding */
+    border-bottom: 1px solid #eee;
     transition: background-color 0.2s ease; /* Smooth hover effect */
 }
 
+.sidebar a:last-child {
+    margin-bottom: 5px; /* Extra space after the last item */
+}
+
 .sidebar a:hover {
-    background-color: #ddd;
+    background-color: #e0e0e0;
 }
 
 .main {
     flex: 1;
     overflow-y: auto; /* Enable charts container scroll */
     padding: 20px;
+    height: 100%;
 }
 
 .chart-container {
@@ -76,19 +87,29 @@ canvas {
     color: black;
 }
 
-/* Search container styling */
-#search-container {
+/* Fixed elements container styling */
+#fixed-sidebar-elements {
     position: sticky;
     top: 0;
+    z-index: 20;
+    background-color: #f2f2f2;
+    width: 100%;
+    border-bottom: 1px solid #ddd;
+    margin: 0;
+    padding: 0;
+}
+
+/* Search container styling */
+#search-container {
+    position: relative;
     background-color: #f8f9fa;
     padding: 10px;
     border-bottom: 1px solid #ccc;
-    z-index: 10;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 #chart-search {
-    width: 100%;
+    width: 80%;
     padding: 8px 30px 8px 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -114,11 +135,57 @@ canvas {
     text-align: center;
 }
 
-#latest-timestamp-display {
-    position: sticky;
-    top: 0;
-    z-index: 10;
+/* Timestamp display styling */
+.latest-timestamp {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #ccc;
+    font-weight: bold;
+    text-align: center;
     background-color: #f8f9fa;
+}
+
+/* Sheet name styles */
+.sheet-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 150px);
+}
+
+/* Chart stats in sidebar */
+.chart-stats {
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    display: flex;
+    justify-content: flex-start;
+    width: 180px; /* Fixed width for the stats container */
+    margin-left: 4px; /* This creates the minimum gap */
+    flex-shrink: 0; /* Prevents the stats from shrinking */
+}
+
+.latest-x {
+    width: 25px; /* Fixed width for T- column */
+    text-align: left;
+    margin-right: 8px;
+}
+
+.latest-pl {
+    width: 65px; /* Fixed width for P/L column */
+    text-align: left;
+    margin-right: 12px;
+}
+
+.latest-rv {
+    width: 65px; /* Fixed width for RV column */
+    text-align: left;
+    margin-left: 4px;
+}
+
+/* Add spacing after fixed container */
+#sidebar > a:first-of-type {
+    margin-top: 10px;
 }
 
 /* Scrollbar styling for better visibility */
