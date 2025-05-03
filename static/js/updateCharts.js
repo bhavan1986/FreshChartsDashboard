@@ -9,62 +9,9 @@ let scrollPositions = {
 // Track mouse position globally
 let globalMouseX = 0;
 let globalMouseY = 0;
+let activeChartId = null;
 
-// Function to update the vertical line position based on mouse position
-function updateVerticalLine(chartId) {
-    const chart = charts[chartId];
-    if (!chart) return;
-    
-    const chartCanvas = chart.canvas;
-    const chartPosition = chartCanvas.getBoundingClientRect();
-    
-    // Check if mouse is over this chart
-    if (globalMouseX >= chartPosition.left && 
-        globalMouseX <= chartPosition.right &&
-        globalMouseY >= chartPosition.top && 
-        globalMouseY <= chartPosition.bottom) {
-        
-        // Create the vertical line if it doesn't exist
-        let verticalLine = document.getElementById('chartjs-vertical-line');
-        if (!verticalLine) {
-            verticalLine = document.createElement('div');
-            verticalLine.id = 'chartjs-vertical-line';
-            verticalLine.style.position = 'absolute';
-            verticalLine.style.pointerEvents = 'none';
-            verticalLine.style.zIndex = '999';
-            document.body.appendChild(verticalLine);
-        }
-        
-        // Update vertical line position
-        verticalLine.style.opacity = '1';
-        verticalLine.style.borderLeft = '2px dashed rgba(0, 0, 0, 0.7)';
-        verticalLine.style.left = globalMouseX + 'px';
-        verticalLine.style.top = chartPosition.top + 'px';
-        verticalLine.style.height = chartPosition.height + 'px';
-    }
-}
-
-// Add these event listeners to track mouse position globally
-document.addEventListener('mousemove', function(e) {
-    globalMouseX = e.clientX;
-    globalMouseY = e.clientY;
-    
-    // Update vertical line for all charts
-    for (let chartId in charts) {
-        updateVerticalLine(chartId);
-    }
-});
-
-document.addEventListener('mouseout', function(e) {
-    // Hide vertical line when mouse leaves the document
-    const verticalLine = document.getElementById('chartjs-vertical-line');
-    if (verticalLine) {
-        verticalLine.style.opacity = '0';
-    }
-});
-
-// Register custom plugin for point highlighting
-// This plugin will handle highlighting points without causing recursive updates
+// Register custom plugin for point highlighting and vertical line alignment
 Chart.register({
     id: 'highlightDataPoint',
     beforeDraw: function(chart) {
@@ -74,6 +21,10 @@ Chart.register({
         const activeElements = chart.tooltip._active;
         const activePoint = activeElements[0];
         const dataIndex = activePoint.index;
+        
+        // First, get the position of the active point
+        const x = activePoint.element.x;
+        const chartPosition = chart.canvas.getBoundingClientRect();
         
         // Draw highlighted points at this index for all datasets
         chart.data.datasets.forEach((dataset, i) => {
@@ -93,15 +44,15 @@ Chart.register({
             const point = meta.data[dataIndex];
             
             // Get position
-            const x = point.x;
-            const y = point.y;
+            const dataPointX = point.x;
+            const dataPointY = point.y;
             
             // Save the current drawing state
             ctx.save();
             
             // Draw outer highlight circle
             ctx.beginPath();
-            ctx.arc(x, y, 8, 0, 2 * Math.PI);
+            ctx.arc(dataPointX, dataPointY, 8, 0, 2 * Math.PI);
             ctx.fillStyle = dataset.backgroundColor || 'blue';
             ctx.fill();
             
@@ -113,6 +64,32 @@ Chart.register({
             // Restore the drawing state
             ctx.restore();
         });
+        
+        // Now update the vertical line to align with the active data point
+        const verticalLine = document.getElementById('chartjs-vertical-line');
+        
+        if (!verticalLine) {
+            // Create the vertical line if it doesn't exist
+            const newVerticalLine = document.createElement('div');
+            newVerticalLine.id = 'chartjs-vertical-line';
+            newVerticalLine.style.position = 'absolute';
+            newVerticalLine.style.pointerEvents = 'none';
+            newVerticalLine.style.zIndex = '999';
+            document.body.appendChild(newVerticalLine);
+            
+            // Position the vertical line at the active data point
+            newVerticalLine.style.opacity = '1';
+            newVerticalLine.style.borderLeft = '2px dashed rgba(0, 0, 0, 0.7)';
+            newVerticalLine.style.left = (chartPosition.left + x) + 'px';
+            newVerticalLine.style.top = chartPosition.top + 'px';
+            newVerticalLine.style.height = chartPosition.height + 'px';
+        } else {
+            // Update the existing vertical line
+            verticalLine.style.opacity = '1';
+            verticalLine.style.left = (chartPosition.left + x) + 'px';
+            verticalLine.style.top = chartPosition.top + 'px';
+            verticalLine.style.height = chartPosition.height + 'px';
+        }
     }
 });
 
@@ -610,6 +587,14 @@ async function fetchDataAndUpdateCharts() {
                 charts[chartId].update();
             }
         });
+        
+        // Add mouseout event to hide vertical line
+        canvas.addEventListener('mouseout', function() {
+            const verticalLine = document.getElementById('chartjs-vertical-line');
+            if (verticalLine) {
+                verticalLine.style.opacity = '0';
+            }
+        });
 
         // Reset Zoom button
         const resetBtn = document.createElement('button');
@@ -887,30 +872,6 @@ async function fetchDataAndUpdateCharts() {
                                 }
                                 return ''; // Omit timestamp when not available
                             }
-                        },
-                        external: function(context) {
-                            // Get tooltip element
-                            const tooltipEl = document.getElementById('chartjs-tooltip');
-                            
-                            // Hide if no tooltip
-                            const tooltipModel = context.tooltip;
-                            if (tooltipModel.opacity === 0) {
-                                if (tooltipEl) {
-                                    tooltipEl.style.opacity = 0;
-                                }
-                                
-                                return;
-                            }
-
-                            // Set caret Position
-                            tooltipEl.classList.remove('above', 'below', 'no-transform');
-                            if (tooltipModel.yAlign) {
-                                tooltipEl.classList.add(tooltipModel.yAlign);
-                            } else {
-                                tooltipEl.classList.add('no-transform');
-                            }
-                            
-                            // Add your tooltip content handling here if needed
                         }
                     }
                 },
