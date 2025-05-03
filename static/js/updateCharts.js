@@ -6,6 +6,63 @@ let scrollPositions = {
     chartsContainer: 0
 };
 
+// Track mouse position globally
+let globalMouseX = 0;
+let globalMouseY = 0;
+
+// Function to update the vertical line position based on mouse position
+function updateVerticalLine(chartId) {
+    const chart = charts[chartId];
+    if (!chart) return;
+    
+    const chartCanvas = chart.canvas;
+    const chartPosition = chartCanvas.getBoundingClientRect();
+    
+    // Check if mouse is over this chart
+    if (globalMouseX >= chartPosition.left && 
+        globalMouseX <= chartPosition.right &&
+        globalMouseY >= chartPosition.top && 
+        globalMouseY <= chartPosition.bottom) {
+        
+        // Create the vertical line if it doesn't exist
+        let verticalLine = document.getElementById('chartjs-vertical-line');
+        if (!verticalLine) {
+            verticalLine = document.createElement('div');
+            verticalLine.id = 'chartjs-vertical-line';
+            verticalLine.style.position = 'absolute';
+            verticalLine.style.pointerEvents = 'none';
+            verticalLine.style.zIndex = '999';
+            document.body.appendChild(verticalLine);
+        }
+        
+        // Update vertical line position
+        verticalLine.style.opacity = '1';
+        verticalLine.style.borderLeft = '2px dashed rgba(0, 0, 0, 0.7)';
+        verticalLine.style.left = globalMouseX + 'px';
+        verticalLine.style.top = chartPosition.top + 'px';
+        verticalLine.style.height = chartPosition.height + 'px';
+    }
+}
+
+// Add these event listeners to track mouse position globally
+document.addEventListener('mousemove', function(e) {
+    globalMouseX = e.clientX;
+    globalMouseY = e.clientY;
+    
+    // Update vertical line for all charts
+    for (let chartId in charts) {
+        updateVerticalLine(chartId);
+    }
+});
+
+document.addEventListener('mouseout', function(e) {
+    // Hide vertical line when mouse leaves the document
+    const verticalLine = document.getElementById('chartjs-vertical-line');
+    if (verticalLine) {
+        verticalLine.style.opacity = '0';
+    }
+});
+
 // Register custom plugin for point highlighting
 // This plugin will handle highlighting points without causing recursive updates
 Chart.register({
@@ -842,12 +899,6 @@ async function fetchDataAndUpdateCharts() {
                                     tooltipEl.style.opacity = 0;
                                 }
                                 
-                                // Remove vertical line if exists
-                                const verticalLine = document.getElementById('chartjs-vertical-line');
-                                if (verticalLine) {
-                                    verticalLine.style.opacity = 0;
-                                }
-                                
                                 return;
                             }
 
@@ -858,28 +909,8 @@ async function fetchDataAndUpdateCharts() {
                             } else {
                                 tooltipEl.classList.add('no-transform');
                             }
-
-                            // Create or update vertical line
-                            let verticalLine = document.getElementById('chartjs-vertical-line');
-                            const chart = context.chart;
-                            const xPosition = tooltipModel.caretX;
                             
-                            if (!verticalLine) {
-                                verticalLine = document.createElement('div');
-                                verticalLine.id = 'chartjs-vertical-line';
-                                verticalLine.style.position = 'absolute';
-                                verticalLine.style.pointerEvents = 'none';
-                                document.body.appendChild(verticalLine);
-                            }
-                            
-                            // Position the vertical line
-                            const chartPosition = chart.canvas.getBoundingClientRect();
-                            verticalLine.style.opacity = 1;
-                            verticalLine.style.borderLeft = '2px dashed rgba(0, 0, 0, 0.7)';
-                            verticalLine.style.left = (chartPosition.left + xPosition) + 'px';
-                            verticalLine.style.top = chartPosition.top + 'px';
-                            verticalLine.style.height = chartPosition.height + 'px';
-                            verticalLine.style.zIndex = 999;
+                            // Add your tooltip content handling here if needed
                         }
                     }
                 },
