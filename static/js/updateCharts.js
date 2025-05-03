@@ -6,6 +6,59 @@ let scrollPositions = {
     chartsContainer: 0
 };
 
+// Register custom plugin for point highlighting
+// This plugin will handle highlighting points without causing recursive updates
+Chart.register({
+    id: 'highlightDataPoint',
+    beforeDraw: function(chart) {
+        if (!chart.tooltip || !chart.tooltip._active || chart.tooltip._active.length === 0) return;
+        
+        const ctx = chart.ctx;
+        const activeElements = chart.tooltip._active;
+        const activePoint = activeElements[0];
+        const dataIndex = activePoint.index;
+        
+        // Draw highlighted points at this index for all datasets
+        chart.data.datasets.forEach((dataset, i) => {
+            // Skip if data doesn't exist at this index or is null/undefined
+            if (!dataset.data[dataIndex] || 
+                dataset.data[dataIndex] === null || 
+                dataset.data[dataIndex] === undefined || 
+                isNaN(dataset.data[dataIndex])) {
+                return;
+            }
+            
+            // Get the meta for this dataset
+            const meta = chart.getDatasetMeta(i);
+            if (!meta || !meta.data || !meta.data[dataIndex]) return;
+            
+            // Get the point element
+            const point = meta.data[dataIndex];
+            
+            // Get position
+            const x = point.x;
+            const y = point.y;
+            
+            // Save the current drawing state
+            ctx.save();
+            
+            // Draw outer highlight circle
+            ctx.beginPath();
+            ctx.arc(x, y, 8, 0, 2 * Math.PI);
+            ctx.fillStyle = dataset.backgroundColor || 'blue';
+            ctx.fill();
+            
+            // Draw white border
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Restore the drawing state
+            ctx.restore();
+        });
+    }
+});
+
 // Function to fetch and display the RunLog timestamp
 async function fetchRunLogTimestamp() {
     try {
@@ -476,7 +529,7 @@ async function fetchDataAndUpdateCharts() {
         sheetTitle.innerHTML = `<b>${sheetName}</b>`;
         chartDiv.appendChild(sheetTitle);
 
-        // N1:P3 Box
+        // N1P3 Box
         const n1p3Div = document.createElement('div');
         n1p3Div.className = 'n1p3-box';
 		
@@ -671,6 +724,10 @@ async function fetchDataAndUpdateCharts() {
                     }
                 },
                 plugins: {
+                    // Our custom plugin for point highlighting is now registered globally
+                    highlightDataPoint: {
+                        // This is empty because the plugin is registered at the top of the file
+                    },
                     zoom: {
                         pan: {
                             enabled: true,
