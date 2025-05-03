@@ -25,22 +25,33 @@ async function fetchRunLogTimestamp() {
                 // Style it
                 timestampDiv.style.padding = '10px';
                 timestampDiv.style.marginBottom = '10px';
-                timestampDiv.style.borderBottom = '1px solid #ccc';
                 timestampDiv.style.fontWeight = 'bold';
                 timestampDiv.style.textAlign = 'center';
                 timestampDiv.style.backgroundColor = '#f8f9fa';
-                
-                // Add to the top of sidebar
-                const sidebar = document.getElementById('sidebar');
-                if (sidebar.firstChild) {
-                    sidebar.insertBefore(timestampDiv, sidebar.firstChild);
-                } else {
-                    sidebar.appendChild(timestampDiv);
-                }
             }
             
             // Update the content
             timestampDiv.innerHTML = `<strong>Latest Data:</strong> ${data.value}`;
+            
+            // Make sure it's in the DOM in the correct place
+            const fixedContainer = document.getElementById('fixed-sidebar-elements');
+            if (fixedContainer) {
+                // Check if timestamp is already a child of fixed container
+                if (!fixedContainer.contains(timestampDiv)) {
+                    // Insert at the top of fixed container
+                    fixedContainer.insertBefore(timestampDiv, fixedContainer.firstChild);
+                }
+            } else {
+                // If no fixed container, add directly to sidebar
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar.contains(timestampDiv)) {
+                    if (sidebar.firstChild) {
+                        sidebar.insertBefore(timestampDiv, sidebar.firstChild);
+                    } else {
+                        sidebar.appendChild(timestampDiv);
+                    }
+                }
+            }
         }
     } catch (error) {
         console.error('Error fetching RunLog timestamp:', error);
@@ -49,13 +60,49 @@ async function fetchRunLogTimestamp() {
 
 // Function to create the search bar
 function createSearchBar(sidebar) {
+    // Create a container for fixed elements if it doesn't exist
+    let fixedContainer = document.getElementById('fixed-sidebar-elements');
+    if (!fixedContainer) {
+        fixedContainer = document.createElement('div');
+        fixedContainer.id = 'fixed-sidebar-elements';
+        fixedContainer.style.position = 'sticky';
+        fixedContainer.style.top = '0';
+        fixedContainer.style.zIndex = '20';
+        fixedContainer.style.backgroundColor = '#f2f2f2';
+        fixedContainer.style.width = '100%';
+        fixedContainer.style.borderBottom = '1px solid #ddd';
+        
+        // Add the timestamp to this container if it exists
+        const timestampDiv = document.getElementById('latest-timestamp-display');
+        if (timestampDiv) {
+            // Move the timestamp if it's already in the DOM
+            if (timestampDiv.parentNode) {
+                timestampDiv.parentNode.removeChild(timestampDiv);
+            }
+            fixedContainer.appendChild(timestampDiv);
+        }
+        
+        // Insert the fixed container at the top of the sidebar
+        if (sidebar.firstChild) {
+            sidebar.insertBefore(fixedContainer, sidebar.firstChild);
+        } else {
+            sidebar.appendChild(fixedContainer);
+        }
+    }
+    
+    // Check if search container already exists in the fixed container
+    let searchContainer = document.getElementById('search-container');
+    if (searchContainer) {
+        // If it exists, don't create a new one
+        return;
+    }
+    
     // Create search container
-    const searchContainer = document.createElement('div');
+    searchContainer = document.createElement('div');
     searchContainer.id = 'search-container';
     searchContainer.style.position = 'relative';
     searchContainer.style.padding = '10px';
     searchContainer.style.marginBottom = '10px';
-    searchContainer.style.borderBottom = '1px solid #ccc';
     searchContainer.style.backgroundColor = '#f8f9fa';
     
     // Create search input
@@ -98,15 +145,8 @@ function createSearchBar(sidebar) {
     searchContainer.appendChild(searchInput);
     searchContainer.appendChild(clearButton);
     
-    // Add search container to sidebar after the timestamp
-    const timestampDiv = document.getElementById('latest-timestamp-display');
-    if (timestampDiv && timestampDiv.nextSibling) {
-        sidebar.insertBefore(searchContainer, timestampDiv.nextSibling);
-    } else if (timestampDiv) {
-        sidebar.insertBefore(searchContainer, sidebar.firstChild.nextSibling);
-    } else {
-        sidebar.insertBefore(searchContainer, sidebar.firstChild);
-    }
+    // Add search container to the fixed container
+    fixedContainer.appendChild(searchContainer);
 }
 
 // Function to filter charts based on search
@@ -263,16 +303,6 @@ async function fetchDataAndUpdateCharts() {
     window.lastScrollPosition = scrollPositions.main;
     document.body.dataset.scrollPosition = scrollPositions.main;
     
-    // Fetch timestamp
-    await fetchRunLogTimestamp();
-
-    // Fetch data
-    const response = await fetch('/data');
-    const data = await response.json();
-
-    const sidebar = document.getElementById('sidebar');
-    const container = document.getElementById('charts-container');
-
     // Remember search value if it exists
     let searchValue = '';
     const searchInput = document.getElementById('chart-search');
@@ -280,22 +310,51 @@ async function fetchDataAndUpdateCharts() {
         searchValue = searchInput.value;
     }
     
-    // Remember the timestamp element
-    const timestampDiv = document.getElementById('latest-timestamp-display');
+    // Create or ensure the fixed container exists before clearing anything
+    const sidebar = document.getElementById('sidebar');
+    let fixedContainer = document.getElementById('fixed-sidebar-elements');
     
-    // Clear content
-    sidebar.innerHTML = '';
-    container.innerHTML = '';
-    
-    // Restore timestamp at the top
-    if (timestampDiv) {
-        sidebar.appendChild(timestampDiv);
+    if (!fixedContainer) {
+        // If no fixed container yet, create it
+        createSearchBar(sidebar); // This will create the fixed container
+        fixedContainer = document.getElementById('fixed-sidebar-elements');
     }
     
-    // Add search bar after timestamp
+    // Don't clear the charts container or sidebar yet - fetch data first
+    // to avoid the blank screen during refresh
+    
+    // Fetch timestamp in background (this creates or updates the timestamp in the fixed container)
+    const timestampPromise = fetchRunLogTimestamp();
+    
+    // Fetch data in parallel
+    const dataPromise = fetch('/data').then(response => response.json());
+    
+    // Wait for both operations to complete
+    const [data] = await Promise.all([dataPromise, timestampPromise]);
+    
+    // Now that we have the data, we can update the UI
+    
+    // Remember existing chart references before clearing
+    const existingCharts = {...charts};
+    
+    // NOW clear the charts container
+    const container = document.getElementById('charts-container');
+    container.innerHTML = '';
+    
+    // Now clear only the non-fixed elements in the sidebar
+    if (fixedContainer) {
+        // Remove all children except the fixed container
+        Array.from(sidebar.children).forEach(child => {
+            if (child !== fixedContainer) {
+                sidebar.removeChild(child);
+            }
+        });
+    }
+    
+    // Create search bar if needed (this checks if it already exists)
     createSearchBar(sidebar);
     
-    // Restore search value if there was one and trigger filtering
+    // Restore search value if there was one
     if (searchValue) {
         const newSearchInput = document.getElementById('chart-search');
         if (newSearchInput) {
@@ -314,6 +373,8 @@ async function fetchDataAndUpdateCharts() {
             }, 50);
         }
     }
+    
+    // Create chart divs
 	for (let sheetName in data) {
         const chartId = 'chart_' + sheetName.replace(/\s+/g, '_');
 
@@ -462,7 +523,7 @@ async function fetchDataAndUpdateCharts() {
         const paddedMinY = minY - padding;
         const paddedMaxY = maxY + padding;
 
-        charts[chartId] = new Chart(ctx, {
+        const chartConfig = {
             type: 'line',
             data: {
                 labels: xLabels,
@@ -765,67 +826,71 @@ async function fetchDataAndUpdateCharts() {
                     if (!e.native) return;
                     
                     // Add cursor style on hover
-                    const points = charts[chartId].getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
-                    if (points.length) {
-                        e.native.target.style.cursor = 'pointer';
-                    } else {
-                        e.native.target.style.cursor = 'default';
+                    const chart = charts[chartId];
+                    if (chart) {
+                        const points = chart.getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
+                        if (points.length) {
+                            e.native.target.style.cursor = 'pointer';
+                        } else {
+                            e.native.target.style.cursor = 'default';
+                        }
                     }
                 }
             }
-        });
+        };
+
+        // Check if there's a saved zoom state
+        const oldChart = existingCharts[chartId];
+        const savedState = currentZoomState[chartId];
         
-        // Store y4 data (timestamp) with the chart if it exists
+        // Create the chart
+        charts[chartId] = new Chart(ctx, chartConfig);
+        
+        // Store timestamps if available
         if (data[sheetName].y4) {
             charts[chartId].timestamps = data[sheetName].y4;
         }
         
-        // Create tooltip div if it doesn't exist
-        if (!document.getElementById('chartjs-tooltip')) {
-            const tooltipEl = document.createElement('div');
-            tooltipEl.id = 'chartjs-tooltip';
-            tooltipEl.style.opacity = 0;
-            tooltipEl.style.pointerEvents = 'none';
-            tooltipEl.style.position = 'absolute';
-            tooltipEl.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
-            tooltipEl.style.borderRadius = '3px';
-            tooltipEl.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.25)';
-            tooltipEl.style.padding = '10px';
-            tooltipEl.style.zIndex = 1000;
-            document.body.appendChild(tooltipEl);
+        // Apply zoom state if we have one
+        if (savedState && charts[chartId]) {
+            try {
+                const newDataLength = charts[chartId].data.labels.length;
+                
+                if (savedState.isViewingLatest) {
+                    // If viewing the latest data, adjust the view to show the same number of points
+                    // but shifted to include any new data points
+                    const pointsToShow = savedState.pointsVisible;
+                    const newMin = Math.max(0, newDataLength - pointsToShow);
+                    
+                    charts[chartId].options.scales.x.min = newMin;
+                    charts[chartId].options.scales.x.max = newDataLength - 1;
+                } else {
+                    // Otherwise, maintain the exact same view
+                    charts[chartId].options.scales.x.min = savedState.min;
+                    charts[chartId].options.scales.x.max = savedState.max;
+                }
+                
+                // Update the chart with the saved zoom state
+                charts[chartId].update();
+            } catch (error) {
+                console.error("Error restoring zoom state for " + chartId + ":", error);
+            }
         }
     } // End of for-loop
-
-    // Apply saved zoom states for each chart
-    for (let chartId in charts) {
-        const chart = charts[chartId];
-        const savedState = currentZoomState[chartId];
-        
-        if (!chart || !savedState) continue;
-        
-        const newDataLength = chart.data.labels.length;
-        
-        try {
-            if (savedState.isViewingLatest) {
-                // If viewing the latest data, adjust the view to show the same number of points
-                // but shifted to include any new data points
-                const pointsToShow = savedState.pointsVisible;
-                const newMin = Math.max(0, newDataLength - pointsToShow);
-                
-                chart.options.scales.x.min = newMin;
-                chart.options.scales.x.max = newDataLength - 1;
-            } else {
-                // Otherwise, maintain the exact same view
-                chart.options.scales.x.min = savedState.min;
-                chart.options.scales.x.max = savedState.max;
-            }
-            
-            // Update the chart
-            chart.update();
-            
-        } catch (error) {
-            console.error("Error restoring zoom state:", error);
-        }
+    
+    // Create tooltip div if it doesn't exist
+    if (!document.getElementById('chartjs-tooltip')) {
+        const tooltipEl = document.createElement('div');
+        tooltipEl.id = 'chartjs-tooltip';
+        tooltipEl.style.opacity = 0;
+        tooltipEl.style.pointerEvents = 'none';
+        tooltipEl.style.position = 'absolute';
+        tooltipEl.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+        tooltipEl.style.borderRadius = '3px';
+        tooltipEl.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.25)';
+        tooltipEl.style.padding = '10px';
+        tooltipEl.style.zIndex = 1000;
+        document.body.appendChild(tooltipEl);
     }
     
     // Restore all scroll positions with multiple attempts
@@ -854,7 +919,7 @@ document.head.insertAdjacentHTML('beforeend', `
         display: flex;
         justify-content: space-between;
         align-items: left;
-        padding: 0px 0px;
+        padding: 0px 2.5px;
         border-bottom: 1px solid #eee;
         transition: background-color 0.2s;
     }
@@ -910,6 +975,42 @@ document.head.insertAdjacentHTML('beforeend', `
         font-weight: bold;
         text-align: center;
         background-color: #f8f9fa;
+    }
+    
+    /* Fixed sidebar container styles */
+    #fixed-sidebar-elements {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background-color: #f2f2f2;
+        width: 100%;
+        border-bottom: 1px solid #ddd;
+        margin: 0;
+        padding: 0;
+    }
+    
+    /* Ensure the scrollable area of the sidebar starts below the fixed elements */
+    #sidebar {
+        display: flex;
+        flex-direction: column;
+        padding-top: 0;
+        margin-top: 0;
+    }
+    
+    /* Ensure fixed container is at the very top with no gaps */
+    #sidebar > #fixed-sidebar-elements {
+        margin-top: 0;
+        padding-top: 0;
+    }
+    
+    /* Add spacing after fixed container */
+    #sidebar > a:first-of-type {
+        margin-top: 10px;
+    }
+    
+    /* Override the default padding of the sidebar */
+    .sidebar {
+        padding: 0 !important;
     }
 </style>
 `);
@@ -1016,7 +1117,7 @@ function setupAutoRefresh() {
                 fetchDataAndUpdateCharts();
             } else {
                 console.log("Outside market hours, skipping refresh at:", new Date().toLocaleTimeString());
-				fetchDataAndUpdateCharts();
+				//fetchDataAndUpdateCharts();
             }
             
             // Log when the next refresh attempt will be
