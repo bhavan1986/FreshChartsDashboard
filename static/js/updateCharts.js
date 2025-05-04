@@ -564,10 +564,19 @@ function createRVDropTable(chartId, xLabels, rvData, timestamps) {
                     td.title = `Time: ${targetTime}`;
                 }
                 
-                td.innerHTML = `<span style="color: ${textColor}">${formattedValue}</span>`;
-            } else {
-                td.textContent = 'N/A';
-            }
+                
+    // Check if value is less than -7% to make it bold
+    const isBelowThreshold = targetValue < -0.07; // -7% as a decimal
+    
+    // Add bold styling if below threshold
+    if (isBelowThreshold) {
+        td.innerHTML = `<span style="color: ${textColor}; font-weight: bold;">${formattedValue}</span>`;
+    } else {
+        td.innerHTML = `<span style="color: ${textColor}">${formattedValue}</span>`;
+    }
+} else {
+    td.textContent = 'N/A';
+}
             
             dataRow.appendChild(td);
         }
