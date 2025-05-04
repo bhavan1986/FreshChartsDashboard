@@ -596,6 +596,43 @@ async function fetchDataAndUpdateCharts() {
             }
         });
 
+
+	// Add wheel pan with shift key functionality - ADD THIS CODE HERE
+					canvas.addEventListener('wheel', function(e) {
+						if (e.shiftKey && charts[chartId]) {
+							e.preventDefault();
+							
+							// Get current extremes
+							const chart = charts[chartId];
+							const currentMin = chart.scales.x.min;
+							const currentMax = chart.scales.x.max;
+							
+							// If min/max are undefined (not zoomed), set them to the current range
+							if (currentMin === undefined || currentMax === undefined) {
+								const dataMin = chart.scales.x.min;
+								const dataMax = chart.scales.x.max;
+								chart.options.scales.x.min = dataMin;
+								chart.options.scales.x.max = dataMax;
+							}
+							
+							// Calculate panning amount (adjust this value to control pan speed)
+							const range = chart.scales.x.max - chart.scales.x.min;
+							const panAmount = range * 0.05;
+							
+							// Pan left or right based on wheel direction
+							if (e.deltaY > 0) {
+								chart.options.scales.x.min += panAmount;
+								chart.options.scales.x.max += panAmount;
+							} else {
+								chart.options.scales.x.min -= panAmount;
+								chart.options.scales.x.max -= panAmount;
+							}
+							
+							chart.update();
+						}
+					});
+					
+					
         // Reset Zoom button
         const resetBtn = document.createElement('button');
         resetBtn.className = 'reset-zoom-btn';
