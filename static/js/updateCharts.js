@@ -300,8 +300,9 @@ Chart.register({
     }
 });
 
-// Function to create the RV Drop% table for each chart with added P/L% row
-function createRVDropTable(chartId, xLabels, rvData, plData, timestamps) {
+// Function to create the RV Drop% table with three rows (RV Drop%, Avg P/L%, Avg Stock Move%)
+// Function to create the RV Drop% table with three rows (RV Drop%, Avg P/L%, Avg Stock Move%)
+function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, timestamps) {
     try {
         // Check if there's an existing table to remove
         const existingTable = document.getElementById(`${chartId}_rv_table`);
@@ -317,17 +318,8 @@ function createRVDropTable(chartId, xLabels, rvData, plData, timestamps) {
         tableContainer.style.flex = '1';
         tableContainer.style.maxWidth = '50%';
         tableContainer.style.overflowX = 'auto';
-        tableContainer.style.maxHeight = '80px'; // Increased height to accommodate two rows
+        tableContainer.style.maxHeight = '80px'; // Keep the same height but without title
         tableContainer.style.overflowY = 'auto'; // Add vertical scrolling
-        
-        // Create the table title
-        const tableTitle = document.createElement('div');
-        tableTitle.style.fontWeight = 'bold';
-        tableTitle.style.marginBottom = '3px';
-        tableTitle.style.fontSize = '12px';
-        tableTitle.style.textAlign = 'center';
-        tableTitle.textContent = 'Daily Values';
-        tableContainer.appendChild(tableTitle);
         
         // Create the table
         const table = document.createElement('table');
@@ -335,16 +327,6 @@ function createRVDropTable(chartId, xLabels, rvData, plData, timestamps) {
         table.style.width = '100%';
         table.style.fontSize = '11px';
         table.style.border = '1px solid #ddd';
-        
-        // Debug container for timestamp inspection (hidden in production)
-        const debugInfo = document.createElement('div');
-        debugInfo.className = 'debug-info';
-        debugInfo.style.display = 'none'; // Set to 'block' to debug
-        debugInfo.style.marginTop = '5px';
-        debugInfo.style.fontSize = '10px';
-        debugInfo.style.color = '#666';
-        debugInfo.style.maxHeight = '100px';
-        debugInfo.style.overflow = 'auto';
         
         // Helper function to extract date from timestamp
         function extractDate(timestamp) {
@@ -415,12 +397,14 @@ function createRVDropTable(chartId, xLabels, rvData, plData, timestamps) {
         
         table.appendChild(headerRow);
         
-        // Create data row for RV Drop%
+        // Create the three data rows
         const rvDataRow = document.createElement('tr');
+        const plDataRow = document.createElement('tr');
+        const stockMoveDataRow = document.createElement('tr');
         
-        // Add label for RV Drop%
+        // Add labels for each row
         const rvLabel = document.createElement('td');
-        rvLabel.textContent = 'RV Drop%  \u00A0 (3:50 PM Values)';
+        rvLabel.textContent = 'RV Drop%';
         rvLabel.style.padding = '2px';
         rvLabel.style.fontWeight = 'bold';
         rvLabel.style.backgroundColor = '#f2f2f2';
@@ -428,10 +412,6 @@ function createRVDropTable(chartId, xLabels, rvData, plData, timestamps) {
         rvLabel.style.textAlign = 'center';
         rvDataRow.appendChild(rvLabel);
         
-        // Create data row for P/L%
-        const plDataRow = document.createElement('tr');
-        
-        // Add label for P/L%
         const plLabel = document.createElement('td');
         plLabel.textContent = 'Avg P/L%';
         plLabel.style.padding = '2px';
@@ -440,6 +420,15 @@ function createRVDropTable(chartId, xLabels, rvData, plData, timestamps) {
         plLabel.style.border = '1px solid #ddd';
         plLabel.style.textAlign = 'center';
         plDataRow.appendChild(plLabel);
+        
+        const stockMoveLabel = document.createElement('td');
+        stockMoveLabel.textContent = 'Avg Stock Move from Open%';
+        stockMoveLabel.style.padding = '2px';
+        stockMoveLabel.style.fontWeight = 'bold';
+        stockMoveLabel.style.backgroundColor = '#f2f2f2';
+        stockMoveLabel.style.border = '1px solid #ddd';
+        stockMoveLabel.style.textAlign = 'center';
+        stockMoveDataRow.appendChild(stockMoveLabel);
         
         // Process each unique X value
         for (let i = 0; i < uniqueXValues.length; i++) {
@@ -465,7 +454,8 @@ function createRVDropTable(chartId, xLabels, rvData, plData, timestamps) {
                     if (!dateGroups[date]) {
                         dateGroups[date] = {
                             rvPoints: [],
-                            plPoints: []
+                            plPoints: [],
+                            stockMovePoints: []
                         };
                     }
                     
@@ -477,31 +467,30 @@ function createRVDropTable(chartId, xLabels, rvData, plData, timestamps) {
                         value: rvData[idx]
                     });
                     
-                    // Make sure plData exists before trying to access it
-                    const plValue = plData && idx < plData.length ? plData[idx] : null;
+                    // Add P/L data points if available
+                    if (plData && idx < plData.length) {
+                        dateGroups[date].plPoints.push({
+                            index: idx,
+                            timestamp: timestamp,
+                            is350: is350PMTimestamp(timestamp),
+                            value: plData[idx]
+                        });
+                    }
                     
-                    dateGroups[date].plPoints.push({
-                        index: idx,
-                        timestamp: timestamp,
-                        is350: is350PMTimestamp(timestamp),
-                        value: plValue
-                    });
+                    // Add Stock Move data points if available
+                    if (stockMoveData && idx < stockMoveData.length) {
+                        dateGroups[date].stockMovePoints.push({
+                            index: idx,
+                            timestamp: timestamp,
+                            is350: is350PMTimestamp(timestamp),
+                            value: stockMoveData[idx]
+                        });
+                    }
                 }
             }
             
             // Get the most recent date that has data
             const sortedDates = Object.keys(dateGroups).sort().reverse();
-            
-            // For debugging
-            if (matchingIndices.length > 0 && timestamps) {
-                debugInfo.innerHTML += `<b>X=${xValue}</b>:<br>`;
-                for (const date in dateGroups) {
-                    debugInfo.innerHTML += `<b>${date}</b>: `;
-                    debugInfo.innerHTML += `RV Points: ${dateGroups[date].rvPoints.length}, `;
-                    debugInfo.innerHTML += `PL Points: ${dateGroups[date].plPoints.length}<br>`;
-                }
-                debugInfo.innerHTML += "<hr>";
-            }
             
             // --- RV DROP% CELL ---
             const rvCell = document.createElement('td');
@@ -588,7 +577,7 @@ function createRVDropTable(chartId, xLabels, rvData, plData, timestamps) {
             let plAvgValue = null;
             let plTimestampInfo = "";
             
-            if (sortedDates.length > 0 && plData) { // Ensure plData exists
+            if (sortedDates.length > 0 && plData) {
                 const latestDate = sortedDates[0];
                 const dataPointsForLatestDate = dateGroups[latestDate].plPoints;
                 
@@ -634,19 +623,82 @@ function createRVDropTable(chartId, xLabels, rvData, plData, timestamps) {
             }
             
             plDataRow.appendChild(plCell);
+            
+            // --- STOCK MOVE% CELL (AVERAGE) ---
+            const stockMoveCell = document.createElement('td');
+            stockMoveCell.style.padding = '2px';
+            stockMoveCell.style.border = '1px solid #ddd';
+            stockMoveCell.style.textAlign = 'center';
+            
+            let stockMoveAvgValue = null;
+            let stockMoveTimestampInfo = "";
+            
+            if (sortedDates.length > 0 && stockMoveData) {
+                const latestDate = sortedDates[0];
+                const dataPointsForLatestDate = dateGroups[latestDate].stockMovePoints;
+                
+                // Calculate average Stock Move% for this date
+                let validValues = [];
+                
+                for (const dataPoint of dataPointsForLatestDate) {
+                    if (dataPoint.value !== null && 
+                        dataPoint.value !== undefined && 
+                        !isNaN(dataPoint.value)) {
+                        validValues.push(dataPoint.value);
+                    }
+                }
+                
+                if (validValues.length > 0) {
+                    // Calculate average
+                    const sum = validValues.reduce((acc, val) => acc + val, 0);
+                    stockMoveAvgValue = sum / validValues.length;
+                    stockMoveTimestampInfo = `Average of ${validValues.length} data points on ${latestDate}`;
+                }
+            }
+            
+            // Format and display the Stock Move average value with color coding
+            if (stockMoveAvgValue !== null) {
+                const formattedValue = (stockMoveAvgValue * 100).toFixed(2) + '%';
+                
+                // NEW COLOR LOGIC FOR STOCK MOVE:
+                // Use green for values > 2% or < -2%, gold/yellow for values in between
+                let textColor;
+                if (stockMoveAvgValue > 0.02 || stockMoveAvgValue < -0.02) {
+                    textColor = 'green'; // Green for significant moves (>2% or <-2%)
+                } else {
+                    textColor = '#ffb300'; // Gold/yellow for smaller moves (same as chart color)
+                }
+                
+                // Add information as a title/tooltip
+                stockMoveCell.title = stockMoveTimestampInfo;
+                
+                // Check if value is less than -7% to make it bold
+                const isBelowThreshold = stockMoveAvgValue < -0.07; // -7% as a decimal
+                
+                // Add bold styling if below threshold
+                if (isBelowThreshold) {
+                    stockMoveCell.innerHTML = `<span style="color: ${textColor}; font-weight: bold;">${formattedValue}</span>`;
+                } else {
+                    stockMoveCell.innerHTML = `<span style="color: ${textColor}">${formattedValue}</span>`;
+                }
+            } else {
+                stockMoveCell.textContent = 'N/A';
+            }
+            
+            stockMoveDataRow.appendChild(stockMoveCell);
         }
         
-        // Add both rows to the table
+        // Add all rows to the table
         table.appendChild(rvDataRow);
         table.appendChild(plDataRow);
+        table.appendChild(stockMoveDataRow);
         
-        // Add all to container
+        // Add table to container
         tableContainer.appendChild(table);
-        tableContainer.appendChild(debugInfo);
         
         return tableContainer;
     } catch (error) {
-        console.error("Error creating RV Drop table with P/L:", error);
+        console.error("Error creating multi-row table:", error);
         // Create minimal error container
         const errorDiv = document.createElement('div');
         errorDiv.id = `${chartId}_rv_table`;
@@ -1324,7 +1376,7 @@ async function fetchDataAndUpdateCharts() {
 		n1p3Div.style.fontSize = '14px';
 
         // Create RV Drop table early - to be placed next to N1P3 box
-        const rvDropTable = createRVDropTable(chartId, xLabels, y3, y1,data[sheetName].y4);
+        const rvDropTable = createRVDropTable(chartId, xLabels, y3, y1,y2,data[sheetName].y4);
         rvDropTable.style.flex = '1';
         rvDropTable.style.maxWidth = '50%';
         
