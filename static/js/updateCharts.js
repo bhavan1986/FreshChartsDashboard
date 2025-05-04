@@ -666,7 +666,7 @@ function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, time
                 if (stockMoveAvgValue > 0.02 || stockMoveAvgValue < -0.02) {
                     textColor = 'green'; // Green for significant moves (>2% or <-2%)
                 } else {
-                    textColor = '#ffb300'; // Gold/yellow for smaller moves (same as chart color)
+                    textColor = 'grey'; // Grey for smaller moves (same as chart color)
                 }
                 
                 // Add information as a title/tooltip
