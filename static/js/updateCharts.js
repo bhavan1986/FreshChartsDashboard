@@ -546,7 +546,7 @@ function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, time
             if (rvTargetValue !== null) {
                 const formattedValue = (rvTargetValue * 100).toFixed(2) + '%';
                 // Color green if positive, red if negative
-                const textColor = rvTargetValue >= 0 ? 'green' : 'red';
+                const textColor = rvTargetValue >= 0 ? '#00A86B' : 'red';
                 
                 // Add the timestamp as a title/tooltip for information
                 if (rvTargetTime) {
@@ -664,7 +664,7 @@ function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, time
                 // Use green for values > 2% or < -2%, gold/yellow for values in between
                 let textColor;
                 if (stockMoveAvgValue > 0.02 || stockMoveAvgValue < -0.02) {
-                    textColor = 'green'; // Green for significant moves (>2% or <-2%)
+                    textColor = '00A86B'; // Green for significant moves (>2% or <-2%)
                 } else {
                     textColor = 'grey'; // Grey for smaller moves (same as chart color)
                 }
