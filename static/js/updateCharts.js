@@ -326,7 +326,7 @@ function createRVDropTable(chartId, xLabels, rvData, plData, timestamps) {
         tableTitle.style.marginBottom = '3px';
         tableTitle.style.fontSize = '12px';
         tableTitle.style.textAlign = 'center';
-        tableTitle.textContent = 'Daily Values \u00A0 (3:50 PM Values/Latest for Today)';
+        tableTitle.textContent = 'Daily Values';
         tableContainer.appendChild(tableTitle);
         
         // Create the table
@@ -420,7 +420,7 @@ function createRVDropTable(chartId, xLabels, rvData, plData, timestamps) {
         
         // Add label for RV Drop%
         const rvLabel = document.createElement('td');
-        rvLabel.textContent = 'RV Drop%';
+        rvLabel.textContent = 'RV Drop%  \u00A0 (3:50 PM Values)';
         rvLabel.style.padding = '2px';
         rvLabel.style.fontWeight = 'bold';
         rvLabel.style.backgroundColor = '#f2f2f2';
