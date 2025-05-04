@@ -1,3 +1,207 @@
+// Immediate scroll restoration to prevent flash to position 0
+(function() {
+    // Immediately try to set scroll positions before any rendering
+    if (localStorage.getItem('savedScrollPosition')) {
+        const savedPos = parseInt(localStorage.getItem('savedScrollPosition'));
+        if (savedPos > 0) {
+            // Prevent flash by immediately scrolling to the saved position
+            window.scrollTo(0, savedPos);
+            console.log("PRE-RENDER: Scroll position set to", savedPos);
+        }
+    }
+    
+    // Also check for main content scroll position
+    if (localStorage.getItem('mainContentScrollPosition')) {
+        // We'll apply this after DOM is ready in DOMContentLoaded
+        console.log("PRE-RENDER: Found saved main content position:", 
+                   localStorage.getItem('mainContentScrollPosition'));
+    }
+})();
+
+// Simple scroll position retention system
+let savedScrollPosition = localStorage.getItem('savedScrollPosition') ? 
+    parseInt(localStorage.getItem('savedScrollPosition')) : 0;
+let savedSidebarPosition = localStorage.getItem('sidebarScrollPosition') ? 
+    parseInt(localStorage.getItem('sidebarScrollPosition')) : 0;
+let savedMainContentPosition = localStorage.getItem('mainContentScrollPosition') ?
+    parseInt(localStorage.getItem('mainContentScrollPosition')) : 0;
+let forceScrollInterval = null;
+let isRefreshing = false; // Flag to track if we're in the middle of refreshing
+
+// Function to identify scrollable containers and store references
+let mainContentContainer = null;
+let sidebarContainer = null;
+
+function identifyScrollableContainers() {
+    // Try to identify the main content container
+    mainContentContainer = document.getElementById('charts-container');
+    console.log("Main content container identified:", mainContentContainer);
+    
+    // Try to identify the sidebar container
+    sidebarContainer = document.getElementById('sidebar');
+    console.log("Sidebar container identified:", sidebarContainer);
+    
+    // Set up scroll listeners for the main content container
+    if (mainContentContainer) {
+        mainContentContainer.addEventListener('scroll', function() {
+            // Save main content scroll position
+            savedMainContentPosition = mainContentContainer.scrollTop;
+            localStorage.setItem('mainContentScrollPosition', String(savedMainContentPosition));
+            console.log("Main content scroll position saved:", savedMainContentPosition);
+        });
+    }
+    
+    return {
+        mainContent: mainContentContainer,
+        sidebar: sidebarContainer
+    };
+}
+
+// Helper function to safely check if a timestamp is around 3:50 PM
+function is350PMTimestamp(value) {
+    // Handle any possible type safely
+    if (value === null || value === undefined) return false;
+    
+    // Try to convert to string safely
+    let str = "";
+    try {
+        // Try different approaches to get a string
+        if (typeof value === "string") {
+            str = value;
+        } else if (typeof value.toString === "function") {
+            str = value.toString();
+        } else {
+            str = "" + value; // Force string conversion
+        }
+    } catch (e) {
+        console.log("Error converting timestamp to string:", e);
+        return false;
+    }
+    
+    // Check for "3:50" or "15:50" with more precision to avoid matching "13:50" or "1:50"
+    // This looks for either "3:50" preceded by a non-digit (to avoid "13:50") 
+    // or "15:50" specifically for 24-hour format
+    
+    // Check for "3:50" not preceded by a digit (to avoid "13:50", "23:50", etc)
+    const has350 = /[^0-9]3:50/.test(" " + str); // Add space to handle case where "3:50" is at the start
+    
+    // Check for "15:50" in 24-hour format
+    const has1550 = str.indexOf("15:50") >= 0;
+    
+    // Check for "3:50 PM" explicitly (most reliable indicator)
+    const has350PM = str.indexOf("3:50 PM") >= 0 || str.indexOf("3:50PM") >= 0;
+    
+    // Debug logging to see what's being detected
+    if (has350 || has1550 || has350PM) {
+        console.log("Found 3:50 PM timestamp:", str);
+    }
+    
+    return has350 || has1550 || has350PM;
+}
+// Store initial scroll position on page load
+window.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM Content Loaded - identifying containers");
+    
+    // Identify all scrollable containers
+    const containers = identifyScrollableContainers();
+    
+    // Check if there's a saved window position
+    if (localStorage.getItem('savedScrollPosition')) {
+        savedScrollPosition = parseInt(localStorage.getItem('savedScrollPosition'));
+        console.log("Found saved window scroll position:", savedScrollPosition);
+        
+        // Restore main window position immediately
+        if (savedScrollPosition > 0) {
+            window.scrollTo(0, savedScrollPosition);
+        }
+    } else {
+        console.log("No saved window scroll position found, using default: 0");
+    }
+    
+    // Check for saved main content position
+    if (localStorage.getItem('mainContentScrollPosition') && containers.mainContent) {
+        savedMainContentPosition = parseInt(localStorage.getItem('mainContentScrollPosition'));
+        console.log("Found saved main content scroll position:", savedMainContentPosition);
+        
+        // Restore main content position immediately
+        if (savedMainContentPosition > 0) {
+            containers.mainContent.scrollTop = savedMainContentPosition;
+        }
+    } else {
+        console.log("No saved main content scroll position found, using default: 0");
+    }
+    
+    // Find and set up the sidebar
+    if (containers.sidebar) {
+        // Add scroll event listener to the sidebar if not already set
+        containers.sidebar.addEventListener('scroll', function() {
+            // Save sidebar scroll position
+            savedSidebarPosition = containers.sidebar.scrollTop;
+            localStorage.setItem('sidebarScrollPosition', String(savedSidebarPosition));
+            console.log("Sidebar scroll position saved:", savedSidebarPosition);
+        });
+        
+        // Try to restore sidebar position
+        if (localStorage.getItem('sidebarScrollPosition')) {
+            savedSidebarPosition = parseInt(localStorage.getItem('sidebarScrollPosition'));
+            containers.sidebar.scrollTop = savedSidebarPosition;
+            console.log("Sidebar scroll position restored:", containers.sidebar.scrollTop);
+        }
+    }
+    
+    // Log initial positions
+    console.log("DOMContentLoaded - current positions - Window:", window.scrollY, 
+               "Sidebar:", containers.sidebar ? containers.sidebar.scrollTop : 'N/A',
+               "Main Content:", containers.mainContent ? containers.mainContent.scrollTop : 'N/A');
+});
+
+// Save positions before unload
+window.addEventListener('beforeunload', function() {
+    // Get references to containers
+    const mainContent = mainContentContainer || document.getElementById('charts-container');
+    const sidebar = sidebarContainer || document.getElementById('sidebar');
+    
+    // Main window position
+    const windowPos = window.scrollY || document.documentElement.scrollTop || 0;
+    if (windowPos > 0) {
+        localStorage.setItem('savedScrollPosition', String(windowPos));
+    }
+    
+    // Main content position
+    if (mainContent) {
+        const mainContentPos = mainContent.scrollTop || 0;
+        if (mainContentPos > 0) {
+            localStorage.setItem('mainContentScrollPosition', String(mainContentPos));
+        }
+    }
+    
+    // Sidebar position
+    if (sidebar) {
+        const sidebarPos = sidebar.scrollTop || 0;
+        if (sidebarPos > 0) {
+            localStorage.setItem('sidebarScrollPosition', String(sidebarPos));
+        }
+    }
+    
+    console.log("BEFOREUNLOAD: Saved positions - Window:", windowPos, 
+               "Sidebar:", sidebar ? sidebar.scrollTop : 'N/A',
+               "Main Content:", mainContent ? mainContent.scrollTop : 'N/A');
+});
+
+// Add window scroll event listener
+window.addEventListener('scroll', function() {
+    // Save main window position
+    const currentPosition = window.scrollY || document.documentElement.scrollTop || 0;
+    
+    // Always update the saved position - more important to have the latest
+    if (currentPosition > 0) {
+        savedScrollPosition = currentPosition;
+        localStorage.setItem('savedScrollPosition', String(currentPosition));
+        console.log("Window scroll position saved:", currentPosition);
+    }
+});
+
+// Regular chart variables
 let charts = {};
 let currentZoomState = {};
 let scrollPositions = {
@@ -10,6 +214,9 @@ let scrollPositions = {
 let globalMouseX = 0;
 let globalMouseY = 0;
 let activeChartId = null;
+
+// Auto-refresh timer
+let refreshTimer = null;
 
 // Register custom plugin for point highlighting and vertical line alignment
 Chart.register({
@@ -92,6 +299,229 @@ Chart.register({
         }
     }
 });
+
+// Function to create the RV Drop% table for each chart
+function createRVDropTable(chartId, xLabels, rvData, timestamps) {
+    try {
+        // Check if there's an existing table to remove
+        const existingTable = document.getElementById(`${chartId}_rv_table`);
+        if (existingTable) {
+            existingTable.remove();
+        }
+        
+        // Create a container for the table
+        const tableContainer = document.createElement('div');
+        tableContainer.id = `${chartId}_rv_table`;
+        tableContainer.className = 'rv-drop-table';
+        tableContainer.style.marginLeft = '5px';
+        tableContainer.style.flex = '1';
+        tableContainer.style.maxWidth = '50%';
+        tableContainer.style.overflowX = 'auto';
+		
+		// Add these lines to directly constrain the height:
+		tableContainer.style.maxHeight = '60px'; // Set your desired height here
+		tableContainer.style.overflowY = 'auto'; // Add scrollbar when content overflows
+
+        
+        // Create the table title
+        const tableTitle = document.createElement('div');
+        tableTitle.style.fontWeight = 'bold';
+        tableTitle.style.marginBottom = '3px';
+        tableTitle.style.fontSize = '12px';
+        tableTitle.style.textAlign = 'center';
+        tableTitle.textContent = 'Daily RV Drop% (3:50 PM Values/Latest for Today)';
+        tableContainer.appendChild(tableTitle);
+        
+        // Create the table
+        const table = document.createElement('table');
+        table.style.borderCollapse = 'collapse';
+        table.style.width = '100%';
+        table.style.fontSize = '11px';
+        table.style.border = '1px solid #ddd';
+        
+        // Create header row
+        const headerRow = document.createElement('tr');
+        
+        // Add X-axis label header
+        const xHeader = document.createElement('th');
+        xHeader.textContent = 'T MINUS';
+        xHeader.style.padding = '2px';
+        xHeader.style.backgroundColor = '#f2f2f2';
+        xHeader.style.border = '1px solid #ddd';
+        xHeader.style.textAlign = 'center';
+        headerRow.appendChild(xHeader);
+        
+        // Get unique X values and sort them
+        let uniqueXValues = [];
+        for (let i = 0; i < xLabels.length; i++) {
+            if (uniqueXValues.indexOf(xLabels[i]) === -1) {
+                uniqueXValues.push(xLabels[i]);
+            }
+        }
+        
+        // Sort unique values
+        uniqueXValues.sort(function(a, b) {
+            // Try to convert to numbers if possible
+            const numA = parseInt(a);
+            const numB = parseInt(b);
+            if (!isNaN(numA) && !isNaN(numB)) {
+                return numB - numA; // Descending order for numeric values
+            }
+            // Fallback to string comparison
+            return String(a).localeCompare(String(b));
+        });
+        
+        // Add X value headers
+        for (let i = 0; i < uniqueXValues.length; i++) {
+            const xValue = uniqueXValues[i];
+            const th = document.createElement('th');
+            th.textContent = xValue;
+            th.style.padding = '2px';
+            th.style.backgroundColor = '#f2f2f2';
+            th.style.border = '1px solid #ddd';
+            th.style.textAlign = 'center';
+            headerRow.appendChild(th);
+        }
+        
+        table.appendChild(headerRow);
+        
+        // Create data row for RV Drop%
+        const dataRow = document.createElement('tr');
+        
+        // Add label for RV Drop%
+        const rvLabel = document.createElement('td');
+        rvLabel.textContent = 'RV Drop%';
+        rvLabel.style.padding = '2px';
+        rvLabel.style.fontWeight = 'bold';
+        rvLabel.style.backgroundColor = '#f2f2f2';
+        rvLabel.style.border = '1px solid #ddd';
+        rvLabel.style.textAlign = 'center';
+        dataRow.appendChild(rvLabel);
+        
+        // Debug container for timestamp inspection (hidden in production)
+        const debugInfo = document.createElement('div');
+        debugInfo.className = 'debug-info';
+        debugInfo.style.display = 'none'; // Set to 'block' for debugging
+        debugInfo.style.marginTop = '5px';
+        debugInfo.style.fontSize = '10px';
+        debugInfo.style.color = '#666';
+        debugInfo.style.maxHeight = '100px';
+        debugInfo.style.overflow = 'auto';
+        
+        // Process each unique X value
+        for (let i = 0; i < uniqueXValues.length; i++) {
+            const xValue = uniqueXValues[i];
+            const td = document.createElement('td');
+            td.style.padding = '2px';
+            td.style.border = '1px solid #ddd';
+            td.style.textAlign = 'center';
+            
+            // Find all indices where xLabels matches this xValue
+            let matchingIndices = [];
+            for (let j = 0; j < xLabels.length; j++) {
+                if (xLabels[j] === xValue) {
+                    matchingIndices.push(j);
+                }
+            }
+            
+            // For debugging - add timestamp info to the debug div
+            if (matchingIndices.length > 0 && timestamps) {
+                debugInfo.innerHTML += `<b>X=${xValue}</b>: `;
+                for (let j = 0; j < matchingIndices.length; j++) {
+                    const idx = matchingIndices[j];
+                    if (idx >= 0 && idx < timestamps.length) {
+                        debugInfo.innerHTML += `${timestamps[idx]} (${is350PMTimestamp(timestamps[idx]) ? "IS 3:50" : "NOT 3:50"}) | `;
+                    }
+                }
+                debugInfo.innerHTML += "<br>";
+            }
+            
+            // Find the value with timestamp closest to 3:50 PM
+            let targetValue = null;
+            let targetTime = null;
+            
+            if (matchingIndices.length > 0 && timestamps) {
+                let closestIndex = -1;
+                
+                // First priority: try to find a 3:50 PM timestamp
+                for (let j = 0; j < matchingIndices.length; j++) {
+                    const index = matchingIndices[j];
+                    
+                    // Make sure index is valid
+                    if (index >= 0 && index < timestamps.length) {
+                        // Get the timestamp
+                        const timestamp = timestamps[index];
+                        
+                        // Check if it's 3:50 PM using our improved helper function
+                        if (is350PMTimestamp(timestamp)) {
+                            closestIndex = index;
+                            targetTime = timestamp;
+                            break;
+                        } else if (closestIndex === -1) {
+                            // If no match yet, use this as fallback
+                            closestIndex = index;
+                        }
+                    }
+                }
+                
+                // If we found a valid index, get the RV value
+                if (closestIndex !== -1 && 
+                    rvData[closestIndex] !== null && 
+                    rvData[closestIndex] !== undefined && 
+                    !isNaN(rvData[closestIndex])) {
+                    targetValue = rvData[closestIndex];
+                    if (!targetTime) targetTime = timestamps[closestIndex];
+                } else {
+                    // If no 3:50 PM value found, use the last valid value for this X
+                    for (let j = matchingIndices.length - 1; j >= 0; j--) {
+                        const idx = matchingIndices[j];
+                        if (rvData[idx] !== null && 
+                            rvData[idx] !== undefined && 
+                            !isNaN(rvData[idx])) {
+                            targetValue = rvData[idx];
+                            targetTime = timestamps[idx];
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Format and display the value with color coding
+            if (targetValue !== null) {
+                const formattedValue = (targetValue * 100).toFixed(2) + '%';
+                // Color green if positive, red if negative
+                const textColor = targetValue >= 0 ? 'green' : 'red';
+                
+                // Add the timestamp as a title/tooltip for extra information
+                if (targetTime) {
+                    td.title = `Time: ${targetTime}`;
+                }
+                
+                td.innerHTML = `<span style="color: ${textColor}">${formattedValue}</span>`;
+            } else {
+                td.textContent = 'N/A';
+            }
+            
+            dataRow.appendChild(td);
+        }
+        
+        table.appendChild(dataRow);
+        tableContainer.appendChild(table);
+        
+        // Add debug info to container (hidden by default)
+        tableContainer.appendChild(debugInfo);
+        
+        return tableContainer;
+    } catch (error) {
+        console.error("Error creating RV Drop table:", error);
+        // Create minimal error container
+        const errorDiv = document.createElement('div');
+        errorDiv.id = `${chartId}_rv_table`;
+        errorDiv.textContent = "Data table unavailable";
+        errorDiv.style.color = "red";
+        return errorDiv;
+    }
+}
 
 // Function to fetch and display the RunLog timestamp
 async function fetchRunLogTimestamp() {
@@ -311,64 +741,240 @@ function clearSearch() {
     searchInput.focus();
 }
 
-// Save all scroll positions before refreshing data
-function saveAllScrollPositions() {
-    // Main window scroll position
-    scrollPositions.main = window.scrollY;
-    
-    // Sidebar scroll position
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar) {
-        scrollPositions.sidebar = sidebar.scrollTop;
+// Add CSS for RV Drop table and layout
+function addRVDropTableStyles() {
+    // Check if styles already exist
+    if (document.getElementById('rv-drop-table-styles')) {
+        return;
     }
     
-    // Charts container scroll position
-    const chartsContainer = document.getElementById('charts-container');
-    if (chartsContainer) {
-        scrollPositions.chartsContainer = chartsContainer.scrollTop;
+    const style = document.createElement('style');
+    style.id = 'rv-drop-table-styles';
+    style.textContent = `
+    .rv-drop-table {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        background-color: white;
+        overflow-x: auto;
+    }
+
+    .rv-drop-table table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+    }
+
+    .rv-drop-table th, .rv-drop-table td {
+        padding: 2px 3px;
+        border: 1px solid #ddd;
+        text-align: center;
+    }
+
+    .rv-drop-table th {
+        background-color: #f2f2f2;
+        font-weight: bold;
     }
     
-    // Save to localStorage as backup
-    localStorage.setItem('scrollPositions', JSON.stringify(scrollPositions));
+    .n1p3-box {
+        border: 1px solid #ddd;
+        padding: 2px;
+        background-color: #f8f8f8;
+        border-radius: 4px;
+        font-size: 11px;
+        overflow: auto;
+    }
     
-    console.log("Saved scroll positions:", scrollPositions);
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        width: 100%;
+    }
+
+    .reset-zoom-btn {
+        padding: 4px 8px;
+        background-color: #f2f2f2;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    
+    .reset-zoom-btn:hover {
+        background-color: #e6e6e6;
+    }
+
+    .chart-controls {
+        display: flex;
+        justify-content: flex-end;
+        margin: 5px 0;
+    }
+
+    /* Make table more responsive */
+    @media (max-width: 768px) {
+        .rv-drop-table table {
+            font-size: 10px;
+        }
+        .rv-drop-table th, .rv-drop-table td {
+            padding: 1px 2px;
+        }
+        .n1p3-box {
+            font-size: 10px;
+        }
+    }
+    `;
+    document.head.appendChild(style);
 }
 
-// Restore all scroll positions after data refresh
-function restoreAllScrollPositions() {
-    // Try to get from localStorage if needed
-    const savedPositions = localStorage.getItem('scrollPositions');
-    if (savedPositions && (!scrollPositions.main && !scrollPositions.sidebar && !scrollPositions.chartsContainer)) {
+// Function to preserve scroll positions during updates
+function preserveScrollPositions() {
+    // Get references to containers if not already set
+    if (!mainContentContainer) {
+        mainContentContainer = document.getElementById('charts-container');
+    }
+    if (!sidebarContainer) {
+        sidebarContainer = document.getElementById('sidebar');
+    }
+    
+    // Store current positions in global variables
+    window.mainScrollPosition = window.scrollY || document.documentElement.scrollTop || 0;
+    
+    if (sidebarContainer) {
+        window.sidebarScrollPosition = sidebarContainer.scrollTop || 0;
+    }
+    
+    if (mainContentContainer) {
+        window.mainContentScrollPosition = mainContentContainer.scrollTop || 0;
+    }
+    
+    console.log("PRESERVING POSITIONS - Window:", window.mainScrollPosition, 
+               "Sidebar:", window.sidebarScrollPosition,
+               "Main Content:", window.mainContentScrollPosition);
+    
+    // Save to localStorage for persistence
+    if (window.mainScrollPosition > 0) {
+        localStorage.setItem('savedScrollPosition', String(window.mainScrollPosition));
+        savedScrollPosition = window.mainScrollPosition;
+    }
+    
+    if (window.sidebarScrollPosition > 0) {
+        localStorage.setItem('sidebarScrollPosition', String(window.sidebarScrollPosition));
+        savedSidebarPosition = window.sidebarScrollPosition;
+    }
+    
+    if (window.mainContentScrollPosition > 0) {
+        localStorage.setItem('mainContentScrollPosition', String(window.mainContentScrollPosition));
+        savedMainContentPosition = window.mainContentScrollPosition;
+    }
+}
+
+// Improved function to fix scroll position - call this AFTER content is loaded
+function fixScroll() {
+    // Get references to containers if not already set
+    if (!mainContentContainer) {
+        mainContentContainer = document.getElementById('charts-container');
+    }
+    if (!sidebarContainer) {
+        sidebarContainer = document.getElementById('sidebar');
+    }
+    
+    // Get saved positions from global variables first, or fall back to saved variables
+    const windowPos = window.mainScrollPosition || savedScrollPosition || 0;
+    const sidebarPos = window.sidebarScrollPosition || savedSidebarPosition || 0;
+    const mainContentPos = window.mainContentScrollPosition || savedMainContentPosition || 0;
+    
+    console.log("FIXING SCROLL - Target positions - Window:", windowPos, 
+               "Sidebar:", sidebarPos,
+               "Main Content:", mainContentPos);
+    
+    // More aggressive restoration for main window
+    if (windowPos > 0) {
         try {
-            scrollPositions = JSON.parse(savedPositions);
-        } catch (e) {
-            console.error("Error parsing saved scroll positions:", e);
+            // Use multiple methods for better browser compatibility
+            window.scrollTo(0, windowPos);
+            document.documentElement.scrollTop = windowPos;
+            document.body.scrollTop = windowPos;
+            console.log("Window scroll position forced to:", windowPos);
+        } catch(e) {
+            console.error("Error in window scroll restoration:", e);
         }
     }
     
-    console.log("Restoring scroll positions:", scrollPositions);
-    
-    // Restore main window scroll
-    if (scrollPositions.main > 0) {
-        window.scrollTo(0, scrollPositions.main);
+    // For sidebar scroll
+    if (sidebarContainer && sidebarPos > 0) {
+        sidebarContainer.scrollTop = sidebarPos;
+        console.log("Sidebar position restored to:", sidebarPos);
     }
     
-    // Restore sidebar scroll
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar && scrollPositions.sidebar > 0) {
-        sidebar.scrollTop = scrollPositions.sidebar;
-    }
-    
-    // Restore charts container scroll
-    const chartsContainer = document.getElementById('charts-container');
-    if (chartsContainer && scrollPositions.chartsContainer > 0) {
-        chartsContainer.scrollTop = scrollPositions.chartsContainer;
+    // For main content scroll
+    if (mainContentContainer && mainContentPos > 0) {
+        mainContentContainer.scrollTop = mainContentPos;
+        console.log("Main content position restored to:", mainContentPos);
     }
 }
 
+// Set up position watcher to continuously restore during DOM updates
+function setupPositionWatcher() {
+    // Get the positions to maintain
+    const windowPos = window.mainScrollPosition || savedScrollPosition || 0;
+    const sidebarPos = window.sidebarScrollPosition || savedSidebarPosition || 0;
+    const mainContentPos = window.mainContentScrollPosition || savedMainContentPosition || 0;
+    
+    // Skip if no positions to restore
+    if (windowPos <= 0 && sidebarPos <= 0 && mainContentPos <= 0) return;
+    
+    console.log("SETTING UP POSITION WATCHER - Window:", windowPos, 
+               "Sidebar:", sidebarPos,
+               "Main Content:", mainContentPos);
+    
+    // Create interval to continuously check and restore positions
+    let attempts = 0;
+    const maxAttempts = 20;
+    const watcher = setInterval(() => {
+        attempts++;
+        
+        // Get references to containers in case they've changed
+        const mainContent = document.getElementById('charts-container');
+        const sidebar = document.getElementById('sidebar');
+        
+        // Restore main window position
+        if (windowPos > 0) {
+            window.scrollTo(0, windowPos);
+        }
+        
+        // Restore sidebar position
+        if (sidebarPos > 0 && sidebar) {
+            sidebar.scrollTop = sidebarPos;
+        }
+        
+        // Restore main content position
+        if (mainContentPos > 0 && mainContent) {
+            mainContent.scrollTop = mainContentPos;
+        }
+        
+        // Log progress
+        if (attempts % 5 === 0) {
+            console.log(`POSITION WATCHER (${attempts}/${maxAttempts}): Current Window=${window.scrollY}, Target=${windowPos}, Current Main=${mainContent ? mainContent.scrollTop : 'N/A'}, Target=${mainContentPos}`);
+        }
+        
+        // Stop after max attempts
+        if (attempts >= maxAttempts) {
+            clearInterval(watcher);
+            console.log("POSITION WATCHER COMPLETE");
+        }
+    }, 100);
+}
+
 async function fetchDataAndUpdateCharts() {
-    // Save all scroll positions before updating
-    saveAllScrollPositions();
+    // Preserve current scroll positions before doing anything
+    preserveScrollPositions();
+    
+    console.log("Starting data refresh, saved positions - Window:", savedScrollPosition, 
+               "Sidebar:", savedSidebarPosition,
+               "Main Content:", savedMainContentPosition);
+    
+    // Add RV Drop Table styles
+    addRVDropTableStyles();
     
     // Save current zoom states for all charts
     for (let chartId in charts) {
@@ -388,10 +994,6 @@ async function fetchDataAndUpdateCharts() {
         };
     }
     
-    // Store scroll position in global variable that persists through refresh
-    window.lastScrollPosition = scrollPositions.main;
-    document.body.dataset.scrollPosition = scrollPositions.main;
-    
     // Remember search value if it exists
     let searchValue = '';
     const searchInput = document.getElementById('chart-search');
@@ -400,7 +1002,7 @@ async function fetchDataAndUpdateCharts() {
     }
     
     // Create or ensure the fixed container exists before clearing anything
-    const sidebar = document.getElementById('sidebar');
+    let sidebar = document.getElementById('sidebar');
     let fixedContainer = document.getElementById('fixed-sidebar-elements');
     
     if (!fixedContainer) {
@@ -409,8 +1011,8 @@ async function fetchDataAndUpdateCharts() {
         fixedContainer = document.getElementById('fixed-sidebar-elements');
     }
     
-    // Don't clear the charts container or sidebar yet - fetch data first
-    // to avoid the blank screen during refresh
+    // Start the position watcher before DOM manipulation
+    setupPositionWatcher();
     
     // Fetch timestamp in background (this creates or updates the timestamp in the fixed container)
     const timestampPromise = fetchRunLogTimestamp();
@@ -464,7 +1066,7 @@ async function fetchDataAndUpdateCharts() {
     }
     
     // Create chart divs
-	for (let sheetName in data) {
+    for (let sheetName in data) {
         const chartId = 'chart_' + sheetName.replace(/\s+/g, '_');
 
         // Get the data for this chart
@@ -506,22 +1108,22 @@ async function fetchDataAndUpdateCharts() {
         // Determine colors for the values only (not the labels)
         const plValueColor = plValue !== null ? (plValue >= 0 ? 'green' : 'red') : 'blue';
         const rvValueColor = rvValue !== null ? (rvValue >= 0 ? 'green' : 'red') : 'red';
-		
-		// Determine color for the T- value based on the number
-		let xValueColor = 'yellow'; // Default color
-		if (latestX !== '') {
-			// Try to convert to a number
-			const xNum = parseInt(latestX);
-			if (!isNaN(xNum)) {
-				if (xNum > 6) {
-					xValueColor = 'green';
-				} else if (xNum >= 4) {
-					xValueColor = 'darkorange'; // More readable than yellow on gray background
-				} else {
-					xValueColor = 'red';
-				}
-			}
-		}
+        
+        // Determine color for the T- value based on the number
+        let xValueColor = 'yellow'; // Default color
+        if (latestX !== '') {
+            // Try to convert to a number
+            const xNum = parseInt(latestX);
+            if (!isNaN(xNum)) {
+                if (xNum > 6) {
+                    xValueColor = 'green';
+                } else if (xNum >= 4) {
+                    xValueColor = 'darkorange'; // More readable than yellow on gray background
+                } else {
+                    xValueColor = 'red';
+                }
+            }
+        }
 
         // Create sidebar item with data on the right side
         const link = document.createElement('a');
@@ -563,16 +1165,42 @@ async function fetchDataAndUpdateCharts() {
         sheetTitle.innerHTML = `<b>${sheetName}</b>`;
         chartDiv.appendChild(sheetTitle);
 
-        // N1P3 Box
+        // Create a row for N1P3 box and RV Drop table side by side
+        const infoRow = document.createElement('div');
+        infoRow.className = 'info-row';
+        infoRow.style.display = 'flex';
+        infoRow.style.justifyContent = 'space-between';
+        infoRow.style.marginBottom = '5px';
+        infoRow.style.width = '100%';
+        
+        // N1P3 Box - now takes half width
         const n1p3Div = document.createElement('div');
         n1p3Div.className = 'n1p3-box';
-		
-		// Log the raw data to see what's there
-		console.log("N1P3 data for " + sheetName + ":", data[sheetName].n1p3);
+        n1p3Div.style.flex = '1';
+        n1p3Div.style.marginRight = '5px';
+        n1p3Div.style.maxWidth = '50%';
+        
+        // Add row numbers to see what's being shown
+        n1p3Div.innerHTML = data[sheetName].n1p3.map(row => row.join(' | ')).join('<br>');
+        
+		// Add these lines to directly constrain the height:
+		n1p3Div.style.maxHeight = '60px'; // Set your desired height here
+		n1p3Div.style.overflowY = 'auto'; // Add scrollbar when content overflows
+		n1p3Div.style.overflowX = 'auto'; // Add scrollbar when content overflows
+		n1p3Div.style.padding = '3px';
+		n1p3Div.style.fontSize = '12px';
 
-		// Add row numbers to see what's being shown
-		n1p3Div.innerHTML = data[sheetName].n1p3.map(row => row.join(' | ')).join('<br>');
-        chartDiv.appendChild(n1p3Div);
+        // Create RV Drop table early - to be placed next to N1P3 box
+        const rvDropTable = createRVDropTable(chartId, xLabels, y3, data[sheetName].y4);
+        rvDropTable.style.flex = '1';
+        rvDropTable.style.maxWidth = '50%';
+        
+        // Add both to the info row
+        infoRow.appendChild(n1p3Div);
+        infoRow.appendChild(rvDropTable);
+        
+        // Add info row to the chart div
+        chartDiv.appendChild(infoRow);
 
         // Canvas
         const canvas = document.createElement('canvas');
@@ -596,43 +1224,41 @@ async function fetchDataAndUpdateCharts() {
             }
         });
 
+        // Add wheel pan with shift key functionality
+        canvas.addEventListener('wheel', function(e) {
+            if (e.shiftKey && charts[chartId]) {
+                e.preventDefault();
+                
+                // Get current extremes
+                const chart = charts[chartId];
+                const currentMin = chart.scales.x.min;
+                const currentMax = chart.scales.x.max;
+                
+                // If min/max are undefined (not zoomed), set them to the current range
+                if (currentMin === undefined || currentMax === undefined) {
+                    const dataMin = chart.scales.x.min;
+                    const dataMax = chart.scales.x.max;
+                    chart.options.scales.x.min = dataMin;
+                    chart.options.scales.x.max = dataMax;
+                }
+                
+                // Calculate panning amount (adjust this value to control pan speed)
+                const range = chart.scales.x.max - chart.scales.x.min;
+                const panAmount = range * 0.05;
+                
+                // Pan left or right based on wheel direction
+                if (e.deltaY > 0) {
+                    chart.options.scales.x.min += panAmount;
+                    chart.options.scales.x.max += panAmount;
+                } else {
+                    chart.options.scales.x.min -= panAmount;
+                    chart.options.scales.x.max -= panAmount;
+                }
+                
+                chart.update();
+            }
+        });
 
-	// Add wheel pan with shift key functionality - ADD THIS CODE HERE
-					canvas.addEventListener('wheel', function(e) {
-						if (e.shiftKey && charts[chartId]) {
-							e.preventDefault();
-							
-							// Get current extremes
-							const chart = charts[chartId];
-							const currentMin = chart.scales.x.min;
-							const currentMax = chart.scales.x.max;
-							
-							// If min/max are undefined (not zoomed), set them to the current range
-							if (currentMin === undefined || currentMax === undefined) {
-								const dataMin = chart.scales.x.min;
-								const dataMax = chart.scales.x.max;
-								chart.options.scales.x.min = dataMin;
-								chart.options.scales.x.max = dataMax;
-							}
-							
-							// Calculate panning amount (adjust this value to control pan speed)
-							const range = chart.scales.x.max - chart.scales.x.min;
-							const panAmount = range * 0.05;
-							
-							// Pan left or right based on wheel direction
-							if (e.deltaY > 0) {
-								chart.options.scales.x.min += panAmount;
-								chart.options.scales.x.max += panAmount;
-							} else {
-								chart.options.scales.x.min -= panAmount;
-								chart.options.scales.x.max -= panAmount;
-							}
-							
-							chart.update();
-						}
-					});
-					
-					
         // Reset Zoom button
         const resetBtn = document.createElement('button');
         resetBtn.className = 'reset-zoom-btn';
@@ -820,7 +1446,7 @@ async function fetchDataAndUpdateCharts() {
                             },
                             pinch: {
                                 enabled: true,
-								threshold: 0.1, // Increase sensitivity for mobile
+                                threshold: 0.1, // Increase sensitivity for mobile
                             },
                             drag: {
                                 enabled: true,
@@ -865,17 +1491,42 @@ async function fetchDataAndUpdateCharts() {
                                     const timestamp = chart.timestamps[index];
                                     let date;
                                     
-                                    if (timestamp.includes('/')) {
+                                    if (typeof timestamp === 'string' && timestamp.indexOf('/') >= 0) {
                                         // If format is MM/DD/YYYY HH:MM
-                                        const [datePart, timePart] = timestamp.split(' ');
-                                        const [month, day, year] = datePart.split('/');
-                                        const [hour, minute] = timePart ? timePart.split(':') : [0, 0];
+                                        const parts = timestamp.split(' ');
+                                        const datePart = parts[0];
+                                        const timePart = parts.length > 1 ? parts[1] : '';
                                         
-                                        // Create date, assuming it's in PST
-                                        date = new Date(year, month - 1, day, hour, minute);
+                                        const dateParts = datePart.split('/');
+                                        if (dateParts.length === 3) {
+                                            const month = parseInt(dateParts[0]);
+                                            const day = parseInt(dateParts[1]);
+                                            const year = parseInt(dateParts[2]);
+                                            
+                                            let hour = 0;
+                                            let minute = 0;
+                                            
+                                            if (timePart) {
+                                                const timeParts = timePart.split(':');
+                                                if (timeParts.length === 2) {
+                                                    hour = parseInt(timeParts[0]);
+                                                    minute = parseInt(timeParts[1]);
+                                                }
+                                            }
+                                            
+                                            // Create date, assuming it's in PST
+                                            date = new Date(year, month - 1, day, hour, minute);
+                                        } else {
+                                            // Try to parse as ISO string or other format
+                                            date = new Date(timestamp);
+                                        }
                                     } else {
                                         // Try to parse as ISO string or other format
-                                        date = new Date(timestamp);
+                                        try {
+                                            date = new Date(timestamp);
+                                        } catch (e) {
+                                            return 'Timestamp: ' + timestamp;
+                                        }
                                     }
                                     
                                     // Check if date is valid
@@ -983,82 +1634,52 @@ async function fetchDataAndUpdateCharts() {
         document.body.appendChild(tooltipEl);
     }
     
-    // Restore all scroll positions with multiple attempts
-    restoreAllScrollPositions();
+    // Restore positions immediately (no delay to avoid flash)
+    console.log("Charts rendered, restoring positions - Window:", savedScrollPosition, 
+               "Sidebar:", savedSidebarPosition,
+               "Main Content:", savedMainContentPosition);
     
-    // Try multiple approaches with increasing delays
-    setTimeout(restoreAllScrollPositions, 100);
-    setTimeout(restoreAllScrollPositions, 300);
-    setTimeout(restoreAllScrollPositions, 500);
-    setTimeout(restoreAllScrollPositions, 1000);
+    // Immediate fix
+    fixScroll();
+    
+    // Set up a sequence of restoration attempts for reliability
+    setTimeout(fixScroll, 50);
+    setTimeout(fixScroll, 100);
+    setTimeout(fixScroll, 300);
+    setTimeout(fixScroll, 500);
+    setTimeout(fixScroll, 1000);
 }
-
-// Auto-refresh every 5 minutes
-let refreshTimer;
 
 // Initial load
 window.addEventListener('load', () => {
+    console.log("Window loaded, initial scroll position:", window.scrollY);
+    
+    // Identify scrollable containers
+    identifyScrollableContainers();
+    
+    // Force a scroll position read and save
+    savedScrollPosition = window.scrollY || document.documentElement.scrollTop || 0;
+    localStorage.setItem('savedScrollPosition', String(savedScrollPosition));
+    
+    // Also check for main content container scroll
+    if (mainContentContainer) {
+        savedMainContentPosition = mainContentContainer.scrollTop || 0;
+        localStorage.setItem('mainContentScrollPosition', String(savedMainContentPosition));
+    }
+    
+    // Also check for sidebar scroll
+    if (sidebarContainer) {
+        savedSidebarPosition = sidebarContainer.scrollTop || 0;
+        localStorage.setItem('sidebarScrollPosition', String(savedSidebarPosition));
+    }
+    
+    console.log("Initial positions saved - Main:", savedScrollPosition, "Sidebar:", savedSidebarPosition, "Main Content:", savedMainContentPosition);
+    
     fetchDataAndUpdateCharts();
     setupAutoRefresh();
-    
-    // Listen for scroll events to continuously track positions
-    window.addEventListener('scroll', function() {
-        scrollPositions.main = window.scrollY;
-    });
-    
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar) {
-        sidebar.addEventListener('scroll', function() {
-            scrollPositions.sidebar = sidebar.scrollTop;
-        });
-    }
-    
-    const chartsContainer = document.getElementById('charts-container');
-    if (chartsContainer) {
-        chartsContainer.addEventListener('scroll', function() {
-            scrollPositions.chartsContainer = chartsContainer.scrollTop;
-        });
-    }
 });
 
-// This is more reliable than relying on browser scroll restoration
-window.addEventListener('pageshow', (event) => {
-    if (event.persisted) {
-        // Try to restore from localStorage first
-        const savedPositions = localStorage.getItem('scrollPositions');
-        if (savedPositions) {
-            try {
-                scrollPositions = JSON.parse(savedPositions);
-                restoreAllScrollPositions();
-            } catch (e) {
-                console.error("Error parsing saved scroll positions on pageshow:", e);
-            }
-        }
-    }
-});
-
-// Reset auto-refresh when tab becomes visible
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-        // Don't restart the timer, just restore scroll positions
-        restoreAllScrollPositions();
-    }
-});
-
-// Save scroll positions before navigating away
-window.addEventListener('beforeunload', () => {
-    // Save current scroll positions to localStorage
-    saveAllScrollPositions();
-    
-    // Clean up vertical line and tooltip
-    const verticalLine = document.getElementById('chartjs-vertical-line');
-    const tooltip = document.getElementById('chartjs-tooltip');
-    
-    if (verticalLine) verticalLine.remove();
-    if (tooltip) tooltip.remove();
-});
-
-// Function to set up automatic refresh - moved to end of script
+// Function to set up automatic refresh
 function setupAutoRefresh() {
     // Only set up a new timer if one isn't already running
     if (!refreshTimer) {
@@ -1095,12 +1716,12 @@ function setupAutoRefresh() {
                 fetchDataAndUpdateCharts();
             } else {
                 console.log("Outside market hours, skipping refresh at:", new Date().toLocaleTimeString());
-				//fetchDataAndUpdateCharts();
+                fetchDataAndUpdateCharts(); // Always refresh for testing purposes
             }
             
             // Log when the next refresh attempt will be
             const nextRefreshTime = new Date(Date.now() + 300000); // 5 minutes from now
             console.log("Next refresh attempt will be at:", nextRefreshTime.toLocaleTimeString());
-        }, 300000); // Check every 5 minutes
+        }, 15000); // Check every 5 minutes (300000ms)
     }
 }
