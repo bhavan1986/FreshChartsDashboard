@@ -300,7 +300,7 @@ Chart.register({
     }
 });
 
-// Function to create the RV Drop% table for each chart
+// Function to create the RV Drop% table for each chart with improved fallback logic
 function createRVDropTable(chartId, xLabels, rvData, timestamps) {
     try {
         // Check if there's an existing table to remove
@@ -317,11 +317,8 @@ function createRVDropTable(chartId, xLabels, rvData, timestamps) {
         tableContainer.style.flex = '1';
         tableContainer.style.maxWidth = '50%';
         tableContainer.style.overflowX = 'auto';
-		
-		// Add these lines to directly constrain the height:
-		tableContainer.style.maxHeight = '60px'; // Set your desired height here
-		tableContainer.style.overflowY = 'auto'; // Add scrollbar when content overflows
-
+        tableContainer.style.maxHeight = '60px'; // Reduced height
+        tableContainer.style.overflowY = 'auto'; // Add vertical scrolling
         
         // Create the table title
         const tableTitle = document.createElement('div');
@@ -329,9 +326,7 @@ function createRVDropTable(chartId, xLabels, rvData, timestamps) {
         tableTitle.style.marginBottom = '3px';
         tableTitle.style.fontSize = '12px';
         tableTitle.style.textAlign = 'center';
-        tableTitle.textContent = 'Daily RV Drop%        (3:50 PM Values/Latest for Today)';
-		tableTitle.textContent = 'Daily RV Drop%  (3:50 PM Values/Latest for Today)';
-		tableTitle.innerHTML = 'Daily RV Drop%&nbsp;&nbsp;&nbsp;(3:50 PM Values/Latest for Today)';
+        tableTitle.textContent = 'Daily RV Drop% \u00A0 (3:50 PM Values/Latest for Today)';
         tableContainer.appendChild(tableTitle);
         
         // Create the table
@@ -340,6 +335,16 @@ function createRVDropTable(chartId, xLabels, rvData, timestamps) {
         table.style.width = '100%';
         table.style.fontSize = '11px';
         table.style.border = '1px solid #ddd';
+        
+        // Debug container for timestamp inspection (hidden in production)
+        const debugInfo = document.createElement('div');
+        debugInfo.className = 'debug-info';
+        debugInfo.style.display = 'none'; // Set to 'block' to debug
+        debugInfo.style.marginTop = '5px';
+        debugInfo.style.fontSize = '10px';
+        debugInfo.style.color = '#666';
+        debugInfo.style.maxHeight = '100px';
+        debugInfo.style.overflow = 'auto';
         
         // Create header row
         const headerRow = document.createElement('tr');
@@ -400,15 +405,28 @@ function createRVDropTable(chartId, xLabels, rvData, timestamps) {
         rvLabel.style.textAlign = 'center';
         dataRow.appendChild(rvLabel);
         
-        // Debug container for timestamp inspection (hidden in production)
-        const debugInfo = document.createElement('div');
-        debugInfo.className = 'debug-info';
-        debugInfo.style.display = 'none'; // Set to 'block' for debugging
-        debugInfo.style.marginTop = '5px';
-        debugInfo.style.fontSize = '10px';
-        debugInfo.style.color = '#666';
-        debugInfo.style.maxHeight = '100px';
-        debugInfo.style.overflow = 'auto';
+        // Helper function to extract date from timestamp
+        function extractDate(timestamp) {
+            if (!timestamp) return null;
+            
+            let dateStr = "";
+            try {
+                // Handle different timestamp formats
+                const str = timestamp.toString();
+                
+                // Typical date formats: MM/DD/YYYY or YYYY-MM-DD
+                if (str.includes('/')) {
+                    dateStr = str.split(' ')[0]; // Get date part before time
+                } else if (str.includes('-')) {
+                    dateStr = str.split('T')[0]; // Get date part before T
+                }
+                
+                return dateStr;
+            } catch (e) {
+                console.error("Error extracting date:", e);
+                return null;
+            }
+        }
         
         // Process each unique X value
         for (let i = 0; i < uniqueXValues.length; i++) {
@@ -428,61 +446,108 @@ function createRVDropTable(chartId, xLabels, rvData, timestamps) {
             
             // For debugging - add timestamp info to the debug div
             if (matchingIndices.length > 0 && timestamps) {
-                debugInfo.innerHTML += `<b>X=${xValue}</b>: `;
+                // Group timestamps by date for better debugging
+                const dateGroups = {};
+                
                 for (let j = 0; j < matchingIndices.length; j++) {
                     const idx = matchingIndices[j];
                     if (idx >= 0 && idx < timestamps.length) {
-                        debugInfo.innerHTML += `${timestamps[idx]} (${is350PMTimestamp(timestamps[idx]) ? "IS 3:50" : "NOT 3:50"}) | `;
+                        const timestamp = timestamps[idx];
+                        const date = extractDate(timestamp) || "Unknown";
+                        
+                        if (!dateGroups[date]) {
+                            dateGroups[date] = [];
+                        }
+                        
+                        dateGroups[date].push({
+                            index: idx,
+                            timestamp: timestamp,
+                            is350: is350PMTimestamp(timestamp),
+                            value: rvData[idx]
+                        });
                     }
                 }
-                debugInfo.innerHTML += "<br>";
+                
+                debugInfo.innerHTML += `<b>X=${xValue}</b>:<br>`;
+                for (const date in dateGroups) {
+                    debugInfo.innerHTML += `<b>${date}</b>: `;
+                    for (const item of dateGroups[date]) {
+                        debugInfo.innerHTML += `${item.timestamp} 
+                                              (${item.is350 ? "IS 3:50" : "NOT 3:50"}, 
+                                               value=${item.value !== null ? (item.value * 100).toFixed(2) + '%' : 'null'}) | `;
+                    }
+                    debugInfo.innerHTML += "<br>";
+                }
+                debugInfo.innerHTML += "<hr>";
             }
             
-            // Find the value with timestamp closest to 3:50 PM
+            // IMPROVED LOGIC FOR FINDING THE RIGHT VALUE FOR THIS X:
             let targetValue = null;
             let targetTime = null;
             
             if (matchingIndices.length > 0 && timestamps) {
-                let closestIndex = -1;
+                // Step 1: Group by date for better organization
+                const dateGroups = {};
                 
-                // First priority: try to find a 3:50 PM timestamp
                 for (let j = 0; j < matchingIndices.length; j++) {
-                    const index = matchingIndices[j];
-                    
-                    // Make sure index is valid
-                    if (index >= 0 && index < timestamps.length) {
-                        // Get the timestamp
-                        const timestamp = timestamps[index];
+                    const idx = matchingIndices[j];
+                    if (idx >= 0 && idx < timestamps.length) {
+                        const timestamp = timestamps[idx];
+                        const date = extractDate(timestamp) || "Unknown";
                         
-                        // Check if it's 3:50 PM using our improved helper function
-                        if (is350PMTimestamp(timestamp)) {
-                            closestIndex = index;
-                            targetTime = timestamp;
-                            break;
-                        } else if (closestIndex === -1) {
-                            // If no match yet, use this as fallback
-                            closestIndex = index;
+                        if (!dateGroups[date]) {
+                            dateGroups[date] = [];
                         }
+                        
+                        dateGroups[date].push({
+                            index: idx,
+                            timestamp: timestamp,
+                            is350: is350PMTimestamp(timestamp),
+                            value: rvData[idx]
+                        });
                     }
                 }
                 
-                // If we found a valid index, get the RV value
-                if (closestIndex !== -1 && 
-                    rvData[closestIndex] !== null && 
-                    rvData[closestIndex] !== undefined && 
-                    !isNaN(rvData[closestIndex])) {
-                    targetValue = rvData[closestIndex];
-                    if (!targetTime) targetTime = timestamps[closestIndex];
-                } else {
-                    // If no 3:50 PM value found, use the last valid value for this X
-                    for (let j = matchingIndices.length - 1; j >= 0; j--) {
-                        const idx = matchingIndices[j];
-                        if (rvData[idx] !== null && 
-                            rvData[idx] !== undefined && 
-                            !isNaN(rvData[idx])) {
-                            targetValue = rvData[idx];
-                            targetTime = timestamps[idx];
+                // Get the most recent date that has data
+                const sortedDates = Object.keys(dateGroups).sort().reverse();
+                
+                if (sortedDates.length > 0) {
+                    const latestDate = sortedDates[0];
+                    const dataPointsForLatestDate = dateGroups[latestDate];
+                    
+                    // Check if there's a 3:50 PM value for this date
+                    let found350 = false;
+                    
+                    for (const dataPoint of dataPointsForLatestDate) {
+                        if (dataPoint.is350 && 
+                            dataPoint.value !== null && 
+                            dataPoint.value !== undefined && 
+                            !isNaN(dataPoint.value)) {
+                            // Found a valid 3:50 PM value
+                            targetValue = dataPoint.value;
+                            targetTime = dataPoint.timestamp;
+                            found350 = true;
                             break;
+                        }
+                    }
+                    
+                    // If no 3:50 PM value, use the latest valid value for this date
+                    if (!found350) {
+                        // Sort data points by timestamp in descending order (latest first)
+                        const sortedPoints = [...dataPointsForLatestDate].sort((a, b) => {
+                            // Simple string comparison should work for most timestamp formats
+                            return String(b.timestamp).localeCompare(String(a.timestamp));
+                        });
+                        
+                        // Find the latest valid value
+                        for (const dataPoint of sortedPoints) {
+                            if (dataPoint.value !== null && 
+                                dataPoint.value !== undefined && 
+                                !isNaN(dataPoint.value)) {
+                                targetValue = dataPoint.value;
+                                targetTime = dataPoint.timestamp;
+                                break;
+                            }
                         }
                     }
                 }
@@ -494,7 +559,7 @@ function createRVDropTable(chartId, xLabels, rvData, timestamps) {
                 // Color green if positive, red if negative
                 const textColor = targetValue >= 0 ? 'green' : 'red';
                 
-                // Add the timestamp as a title/tooltip for extra information
+                // Add the timestamp as a title/tooltip for information
                 if (targetTime) {
                     td.title = `Time: ${targetTime}`;
                 }
@@ -510,7 +575,7 @@ function createRVDropTable(chartId, xLabels, rvData, timestamps) {
         table.appendChild(dataRow);
         tableContainer.appendChild(table);
         
-        // Add debug info to container (hidden by default)
+        // Add debug info to container
         tableContainer.appendChild(debugInfo);
         
         return tableContainer;
@@ -524,7 +589,6 @@ function createRVDropTable(chartId, xLabels, rvData, timestamps) {
         return errorDiv;
     }
 }
-
 // Function to fetch and display the RunLog timestamp
 async function fetchRunLogTimestamp() {
     try {
