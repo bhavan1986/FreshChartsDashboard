@@ -325,7 +325,7 @@ function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, time
         const table = document.createElement('table');
         table.style.borderCollapse = 'collapse';
         table.style.width = '100%';
-        table.style.fontSize = '12px';
+        table.style.fontSize = '11.5px';
         table.style.border = '1px solid #ddd';
         
         // Helper function to extract date from timestamp
