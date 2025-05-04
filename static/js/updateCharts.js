@@ -329,7 +329,9 @@ function createRVDropTable(chartId, xLabels, rvData, timestamps) {
         tableTitle.style.marginBottom = '3px';
         tableTitle.style.fontSize = '12px';
         tableTitle.style.textAlign = 'center';
-        tableTitle.textContent = 'Daily RV Drop% (3:50 PM Values/Latest for Today)';
+        tableTitle.textContent = 'Daily RV Drop%        (3:50 PM Values/Latest for Today)';
+		tableTitle.textContent = 'Daily RV Drop%  (3:50 PM Values/Latest for Today)';
+		tableTitle.innerHTML = 'Daily RV Drop%&nbsp;&nbsp;&nbsp;(3:50 PM Values/Latest for Today)';
         tableContainer.appendChild(tableTitle);
         
         // Create the table
@@ -1716,12 +1718,12 @@ function setupAutoRefresh() {
                 fetchDataAndUpdateCharts();
             } else {
                 console.log("Outside market hours, skipping refresh at:", new Date().toLocaleTimeString());
-                fetchDataAndUpdateCharts(); // Always refresh for testing purposes
+                //fetchDataAndUpdateCharts(); // Always refresh for testing purposes
             }
             
             // Log when the next refresh attempt will be
             const nextRefreshTime = new Date(Date.now() + 300000); // 5 minutes from now
             console.log("Next refresh attempt will be at:", nextRefreshTime.toLocaleTimeString());
-        }, 15000); // Check every 5 minutes (300000ms)
+        }, 300000); // Check every 5 minutes (300000ms)
     }
 }
