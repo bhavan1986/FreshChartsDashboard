@@ -300,8 +300,7 @@ Chart.register({
     }
 });
 
-// Function to create the RV Drop% table with three rows (RV Drop%, Avg P/L%, Avg Stock Move%)
-// Function to create the RV Drop% table with three rows (RV Drop%, Avg P/L%, Avg Stock Move%)
+// Modified function to create the RV Drop% table with swapped rows 2 and 3
 function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, timestamps) {
     try {
         // Check if there's an existing table to remove
@@ -399,8 +398,8 @@ function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, time
         
         // Create the three data rows
         const rvDataRow = document.createElement('tr');
-        const plDataRow = document.createElement('tr');
-        const stockMoveDataRow = document.createElement('tr');
+        const stockMoveDataRow = document.createElement('tr'); // SWAPPED - moved up one position
+        const plDataRow = document.createElement('tr'); // SWAPPED - moved down one position
         
         // Add labels for each row
         const rvLabel = document.createElement('td');
@@ -412,15 +411,7 @@ function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, time
         rvLabel.style.textAlign = 'center';
         rvDataRow.appendChild(rvLabel);
         
-        const plLabel = document.createElement('td');
-        plLabel.textContent = 'Avg P/L%';
-        plLabel.style.padding = '2px';
-        plLabel.style.fontWeight = 'bold';
-        plLabel.style.backgroundColor = '#f2f2f2';
-        plLabel.style.border = '1px solid #ddd';
-        plLabel.style.textAlign = 'center';
-        plDataRow.appendChild(plLabel);
-        
+        // SWAPPED - Stock Move label is now added to the second row
         const stockMoveLabel = document.createElement('td');
         stockMoveLabel.textContent = 'Avg Stock Move from Open%';
         stockMoveLabel.style.padding = '2px';
@@ -429,6 +420,16 @@ function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, time
         stockMoveLabel.style.border = '1px solid #ddd';
         stockMoveLabel.style.textAlign = 'center';
         stockMoveDataRow.appendChild(stockMoveLabel);
+        
+        // SWAPPED - P/L label is now added to the third row
+        const plLabel = document.createElement('td');
+        plLabel.textContent = 'Avg P/L%';
+        plLabel.style.padding = '2px';
+        plLabel.style.fontWeight = 'bold';
+        plLabel.style.backgroundColor = '#f2f2f2';
+        plLabel.style.border = '1px solid #ddd';
+        plLabel.style.textAlign = 'center';
+        plDataRow.appendChild(plLabel);
         
         // Process each unique X value
         for (let i = 0; i < uniqueXValues.length; i++) {
@@ -568,63 +569,7 @@ function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, time
             
             rvDataRow.appendChild(rvCell);
             
-            // --- P/L% CELL (AVERAGE) ---
-            const plCell = document.createElement('td');
-            plCell.style.padding = '2px';
-            plCell.style.border = '1px solid #ddd';
-            plCell.style.textAlign = 'center';
-            
-            let plAvgValue = null;
-            let plTimestampInfo = "";
-            
-            if (sortedDates.length > 0 && plData) {
-                const latestDate = sortedDates[0];
-                const dataPointsForLatestDate = dateGroups[latestDate].plPoints;
-                
-                // Calculate average P/L% for this date
-                let validValues = [];
-                
-                for (const dataPoint of dataPointsForLatestDate) {
-                    if (dataPoint.value !== null && 
-                        dataPoint.value !== undefined && 
-                        !isNaN(dataPoint.value)) {
-                        validValues.push(dataPoint.value);
-                    }
-                }
-                
-                if (validValues.length > 0) {
-                    // Calculate average
-                    const sum = validValues.reduce((acc, val) => acc + val, 0);
-                    plAvgValue = sum / validValues.length;
-                    plTimestampInfo = `Average of ${validValues.length} data points on ${latestDate}`;
-                }
-            }
-            
-            // Format and display the P/L average value with color coding
-            if (plAvgValue !== null) {
-                const formattedValue = (plAvgValue * 100).toFixed(2) + '%';
-                // Color green if positive, red if negative
-                const textColor = plAvgValue >= 0 ? 'green' : 'red';
-                
-                // Add information as a title/tooltip
-                plCell.title = plTimestampInfo;
-                
-                // Check if value is less than -7% to make it bold
-                const isBelowThreshold = plAvgValue < -0.07; // -7% as a decimal
-                
-                // Add bold styling if below threshold
-                if (isBelowThreshold) {
-                    plCell.innerHTML = `<span style="color: ${textColor}; font-weight: bold;">${formattedValue}</span>`;
-                } else {
-                    plCell.innerHTML = `<span style="color: ${textColor}">${formattedValue}</span>`;
-                }
-            } else {
-                plCell.textContent = 'N/A';
-            }
-            
-            plDataRow.appendChild(plCell);
-            
-            // --- STOCK MOVE% CELL (AVERAGE) ---
+            // --- STOCK MOVE% CELL (AVERAGE) --- SWAPPED - now in the second row
             const stockMoveCell = document.createElement('td');
             stockMoveCell.style.padding = '2px';
             stockMoveCell.style.border = '1px solid #ddd';
@@ -686,12 +631,68 @@ function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, time
             }
             
             stockMoveDataRow.appendChild(stockMoveCell);
+            
+            // --- P/L% CELL (AVERAGE) --- SWAPPED - now in the third row
+            const plCell = document.createElement('td');
+            plCell.style.padding = '2px';
+            plCell.style.border = '1px solid #ddd';
+            plCell.style.textAlign = 'center';
+            
+            let plAvgValue = null;
+            let plTimestampInfo = "";
+            
+            if (sortedDates.length > 0 && plData) {
+                const latestDate = sortedDates[0];
+                const dataPointsForLatestDate = dateGroups[latestDate].plPoints;
+                
+                // Calculate average P/L% for this date
+                let validValues = [];
+                
+                for (const dataPoint of dataPointsForLatestDate) {
+                    if (dataPoint.value !== null && 
+                        dataPoint.value !== undefined && 
+                        !isNaN(dataPoint.value)) {
+                        validValues.push(dataPoint.value);
+                    }
+                }
+                
+                if (validValues.length > 0) {
+                    // Calculate average
+                    const sum = validValues.reduce((acc, val) => acc + val, 0);
+                    plAvgValue = sum / validValues.length;
+                    plTimestampInfo = `Average of ${validValues.length} data points on ${latestDate}`;
+                }
+            }
+            
+            // Format and display the P/L average value with color coding
+            if (plAvgValue !== null) {
+                const formattedValue = (plAvgValue * 100).toFixed(2) + '%';
+                // Color green if positive, red if negative
+                const textColor = plAvgValue >= 0 ? 'green' : 'red';
+                
+                // Add information as a title/tooltip
+                plCell.title = plTimestampInfo;
+                
+                // Check if value is less than -7% to make it bold
+                const isBelowThreshold = plAvgValue < -0.07; // -7% as a decimal
+                
+                // Add bold styling if below threshold
+                if (isBelowThreshold) {
+                    plCell.innerHTML = `<span style="color: ${textColor}; font-weight: bold;">${formattedValue}</span>`;
+                } else {
+                    plCell.innerHTML = `<span style="color: ${textColor}">${formattedValue}</span>`;
+                }
+            } else {
+                plCell.textContent = 'N/A';
+            }
+            
+            plDataRow.appendChild(plCell);
         }
         
-        // Add all rows to the table
+        // Add all rows to the table in the new order
         table.appendChild(rvDataRow);
-        table.appendChild(plDataRow);
-        table.appendChild(stockMoveDataRow);
+        table.appendChild(stockMoveDataRow); // SWAPPED - now second
+        table.appendChild(plDataRow); // SWAPPED - now third
         
         // Add table to container
         tableContainer.appendChild(table);
