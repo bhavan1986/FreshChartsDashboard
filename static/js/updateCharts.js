@@ -98,7 +98,6 @@ function is350PMTimestamp(value) {
     
     return has350 || has1550 || has350PM;
 }
-
 // Store initial scroll position on page load
 window.addEventListener('DOMContentLoaded', function() {
     console.log("DOM Content Loaded - identifying containers");
@@ -262,15 +261,6 @@ Chart.register({
             ctx.beginPath();
             ctx.arc(dataPointX, dataPointY, 8, 0, 2 * Math.PI);
             ctx.fillStyle = dataset.backgroundColor || 'blue';
-            if (typeof dataset.backgroundColor === 'function') {
-                // For datasets with dynamic colors
-                ctx.fillStyle = dataset.backgroundColor({
-                    datasetIndex: i,
-                    dataIndex: dataIndex,
-                    dataset: dataset,
-                    raw: dataset.data[dataIndex]
-                });
-            }
             ctx.fill();
             
             // Draw white border
@@ -307,153 +297,6 @@ Chart.register({
             verticalLine.style.top = chartPosition.top + 'px';
             verticalLine.style.height = chartPosition.height + 'px';
         }
-    }
-});
-
-// Register custom plugin for managing P/L legend
-// Register custom plugin for managing P/L legend
-Chart.register({
-    id: 'customLegend',
-    afterDraw: function(chart) {
-        const ctx = chart.ctx;
-        const legend = chart.legend;
-        
-        if (legend) {
-            const items = legend.legendItems;
-            
-            // Find the P/L legend item
-            const plItem = items.find(item => 
-                item.text === 'P/L %' || item.text.startsWith('P/L %'));
-            
-            if (plItem) {
-                // Save original context
-                ctx.save();
-                
-                // Find position of the legend item
-                const x = plItem.x;
-                const y = plItem.y;
-                const width = chart.legend.options.labels.boxWidth;
-                const height = chart.legend.options.labels.boxHeight || 12;
-                
-                // Calculate center position
-                const centerY = y;
-                
-                // Clear the original color box completely
-                ctx.fillStyle = 'white';
-                ctx.fillRect(x - 2, centerY - height/2 - 2, width + 4, height + 4);
-                
-                // Draw the split-colored rectangle
-                // Green half
-                ctx.fillStyle = 'green';
-                ctx.fillRect(x, centerY - height/2, width/2, height);
-                
-                // Red half
-                ctx.fillStyle = 'red';
-                ctx.fillRect(x + width/2, centerY - height/2, width/2, height);
-                
-                // Add border
-                ctx.strokeStyle = '#666';
-                ctx.lineWidth = 0.5;
-                ctx.strokeRect(x, centerY - height/2, width, height);
-                
-                ctx.restore();
-            }
-        }
-    }
-});
-
-// Create custom plugin to draw the line segments with proper colors for zero crossings
-Chart.register({
-    id: 'splitLinePlugin',
-    beforeDatasetsDraw: function(chart) {
-        const ctx = chart.ctx;
-        
-        // Find the P/L dataset
-        const plDataset = chart.data.datasets.find(ds => ds.label === 'P/L %');
-        if (!plDataset) return;
-        
-        const plDatasetIndex = chart.data.datasets.indexOf(plDataset);
-        
-        if (plDatasetIndex === -1) return;
-        
-        const meta = chart.getDatasetMeta(plDatasetIndex);
-        
-        // Skip if this dataset is hidden
-        if (meta.hidden) return;
-        
-        // Get the dataset
-        const data = plDataset.data;
-        
-        // Draw all line segments
-        for (let i = 0; i < data.length - 1; i++) {
-            const current = data[i];
-            const next = data[i+1];
-            
-            // Skip if either point is NaN or null
-            if (current === null || next === null || 
-                isNaN(current) || isNaN(next)) {
-                continue;
-            }
-            
-            // Get the canvas positions for these points
-            const pointCurrent = meta.data[i];
-            const pointNext = meta.data[i+1];
-            
-            // Skip if points aren't defined
-            if (!pointCurrent || !pointNext) continue;
-            
-            // Get coordinates
-            const xStart = pointCurrent.x;
-            const yStart = pointCurrent.y;
-            const xEnd = pointNext.x;
-            const yEnd = pointNext.y;
-            
-            // Check if segment crosses zero
-            if ((current >= 0 && next < 0) || (current < 0 && next >= 0)) {
-                // Calculate the zero crossing point
-                // y = mx + b
-                // For y = 0, we have x = -b/m
-                
-                const m = (yEnd - yStart) / (xEnd - xStart);
-                const b = yStart - m * xStart;
-                
-                // Calculate x-coordinate where y = 0 (zero axis)
-                // Find where the line and the zero y-value intersect
-                const zeroY = chart.scales.y1.getPixelForValue(0);
-                const zeroX = (zeroY - b) / m;
-                
-                // Draw first segment
-                ctx.save();
-                ctx.beginPath();
-                ctx.moveTo(xStart, yStart);
-                ctx.lineTo(zeroX, zeroY);
-                ctx.strokeStyle = current >= 0 ? 'green' : 'red';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-                
-                // Draw second segment
-                ctx.beginPath();
-                ctx.moveTo(zeroX, zeroY);
-                ctx.lineTo(xEnd, yEnd);
-                ctx.strokeStyle = next >= 0 ? 'green' : 'red';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-                ctx.restore();
-            } else {
-                // Draw regular segment with appropriate color
-                ctx.save();
-                ctx.beginPath();
-                ctx.moveTo(xStart, yStart);
-                ctx.lineTo(xEnd, yEnd);
-                ctx.strokeStyle = current >= 0 ? 'green' : 'red';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-                ctx.restore();
-            }
-        }
-        
-        // Make the original line invisible but keep the points
-        meta.dataset.draw = function() {}; // Override the line drawing function
     }
 });
 
@@ -1526,15 +1369,15 @@ async function fetchDataAndUpdateCharts() {
         // Add row numbers to see what's being shown
         n1p3Div.innerHTML = data[sheetName].n1p3.map(row => row.join(' | ')).join('<br>');
         
-        // Add these lines to directly constrain the height:
-        n1p3Div.style.maxHeight = '80px'; // Set your desired height here
-        n1p3Div.style.overflowY = 'auto'; // Add scrollbar when content overflows
-        n1p3Div.style.overflowX = 'auto'; // Add scrollbar when content overflows
-        n1p3Div.style.padding = '3px';
-        n1p3Div.style.fontSize = '14px';
+		// Add these lines to directly constrain the height:
+		n1p3Div.style.maxHeight = '80px'; // Set your desired height here
+		n1p3Div.style.overflowY = 'auto'; // Add scrollbar when content overflows
+		n1p3Div.style.overflowX = 'auto'; // Add scrollbar when content overflows
+		n1p3Div.style.padding = '3px';
+		n1p3Div.style.fontSize = '14px';
 
         // Create RV Drop table early - to be placed next to N1P3 box
-        const rvDropTable = createRVDropTable(chartId, xLabels, y3, y1, y2, data[sheetName].y4);
+        const rvDropTable = createRVDropTable(chartId, xLabels, y3, y1,y2,data[sheetName].y4);
         rvDropTable.style.flex = '1';
         rvDropTable.style.maxWidth = '50%';
         
@@ -1636,18 +1479,10 @@ async function fetchDataAndUpdateCharts() {
                     {
                         label: 'P/L %',
                         data: y1,
-                        // Use a function to determine point colors
-                        backgroundColor: function(context) {
-                            const index = context.dataIndex;
-                            const value = context.dataset.data[index];
-                            // Return appropriate color based on value
-                            return value >= 0 ? 'green' : 'red';
-                        },
-                        // Make the original line transparent - our custom plugin will draw the lines
-                        borderColor: 'transparent',
+                        borderColor: 'blue',
+                        backgroundColor: 'blue',
                         pointRadius: 3,
                         pointHoverRadius: 6,
-                        tension: 0, // Use straight lines for better zero crossing calculations
                         yAxisID: 'y1'
                     },
                     {
@@ -1662,8 +1497,8 @@ async function fetchDataAndUpdateCharts() {
                     {
                         label: 'Daily RV Drop %',
                         data: y3,
-                        borderColor: 'purple',
-                        backgroundColor: 'purple',
+                        borderColor: 'red',
+                        backgroundColor: 'red',
                         pointRadius: 3,
                         pointHoverRadius: 6,
                         yAxisID: 'y2'
@@ -1780,10 +1615,10 @@ async function fetchDataAndUpdateCharts() {
                     }
                 },
                 plugins: {
-                    // Use custom plugins
-                    splitLinePlugin: {}, // Our custom plugin for proper line coloring
-                    customLegend: {}, // For custom legend display 
-                    highlightDataPoint: {}, // For highlighting points
+                    // Our custom plugin for point highlighting is now registered globally
+                    highlightDataPoint: {
+                        // This is empty because the plugin is registered at the top of the file
+                    },
                     zoom: {
                         pan: {
                             enabled: true,
@@ -1809,24 +1644,7 @@ async function fetchDataAndUpdateCharts() {
                         }
                     },
                     legend: {
-                        position: 'top',
-                        labels: {
-                            generateLabels: function(chart) {
-                                // Get the default labels
-                                const originalLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
-                                
-                                // Find the P/L dataset label
-                                const plIndex = originalLabels.findIndex(label => 
-                                    label.text === 'P/L %');
-                                
-                                if (plIndex !== -1) {
-                                    // Update the P/L label text
-                                    originalLabels[plIndex].text = 'P/L % (Green > 0%, Red < 0%)';
-                                }
-                                
-                                return originalLabels;
-                            }
-                        }
+                        position: 'top'
                     },
                     tooltip: {
                         mode: 'index',
