@@ -1563,7 +1563,7 @@ async function fetchDataAndUpdateCharts() {
                         position: 'left',
                         title: {
                             display: true,
-                            text: 'P/L %   |    Stock Move %',
+							text: 'P/L %   |    Stock Move %',
                             font:{
                                 size: 14,
                                 weight: 'bold'
@@ -1779,40 +1779,41 @@ async function fetchDataAndUpdateCharts() {
         }
         
         // Apply zoom state if we have one
-					if (savedState && charts[chartId]) {
-						try {
-							const newDataLength = charts[chartId].data.labels.length;
-							const oldDataLength = savedState.dataLength;
-							
-							// Calculate how many new data points were added
-							const newPoints = Math.max(0, newDataLength - oldDataLength);
-							
-							// Only apply zoom state if there was one before and we have new points
-							if (savedState.min !== undefined && savedState.max !== undefined && newPoints > 0) {
-								// Always show the latest data point (at the new max index)
-								// but keep the same min point we were looking at before
-								let newMin = savedState.min;
-								let newMax = newDataLength - 1; // Always show the last (latest) data point
-								
-								console.log(`Auto-zooming chart ${chartId}: min=${newMin}, max=${newMax}, added ${newPoints} new points`);
-								
-								// Apply the zoom state
-								charts[chartId].options.scales.x.min = newMin;
-								charts[chartId].options.scales.x.max = newMax;
-							} else if (savedState.min !== undefined && savedState.max !== undefined) {
-								// If no new points added, restore the exact same view as before
-								charts[chartId].options.scales.x.min = savedState.min;
-								charts[chartId].options.scales.x.max = savedState.max;
-								
-								console.log(`Restoring exact zoom for ${chartId}: min=${savedState.min}, max=${savedState.max}, no new points`);
-							}
-							
-							// Update the chart with the saved zoom state
-							charts[chartId].update();
-						} catch (error) {
-							console.error("Error restoring zoom state for " + chartId + ":", error);
-						}
-					}
+        if (savedState && charts[chartId]) {
+            try {
+                const newDataLength = charts[chartId].data.labels.length;
+                const oldDataLength = savedState.dataLength;
+                
+                // Calculate how many new data points were added
+                const newPoints = Math.max(0, newDataLength - oldDataLength);
+                
+                // Only apply zoom state if there was one before and we have new points
+                if (savedState.min !== undefined && savedState.max !== undefined && newPoints > 0) {
+                    // Always show the latest data point (at the new max index)
+                    // but keep the same min point we were looking at before
+                    let newMin = savedState.min;
+                    let newMax = newDataLength - 1; // Always show the last (latest) data point
+                    
+                    console.log(`Auto-zooming chart ${chartId}: min=${newMin}, max=${newMax}, added ${newPoints} new points`);
+                    
+                    // Apply the zoom state
+                    charts[chartId].options.scales.x.min = newMin;
+                    charts[chartId].options.scales.x.max = newMax;
+                } else if (savedState.min !== undefined && savedState.max !== undefined) {
+                    // If no new points added, restore the exact same view as before
+                    charts[chartId].options.scales.x.min = savedState.min;
+                    charts[chartId].options.scales.x.max = savedState.max;
+                    
+                    console.log(`Restoring exact zoom for ${chartId}: min=${savedState.min}, max=${savedState.max}, no new points`);
+                }
+                
+                // Update the chart with the saved zoom state
+                charts[chartId].update();
+            } catch (error) {
+                console.error("Error restoring zoom state for " + chartId + ":", error);
+            }
+        }
+    } // End of for-loop for chart creation
     
     // Create tooltip div if it doesn't exist
     if (!document.getElementById('chartjs-tooltip')) {
@@ -1843,7 +1844,7 @@ async function fetchDataAndUpdateCharts() {
     setTimeout(fixScroll, 300);
     setTimeout(fixScroll, 500);
     setTimeout(fixScroll, 1000);
-}
+} // End of fetchDataAndUpdateCharts function
 
 // Initial load
 window.addEventListener('load', () => {
