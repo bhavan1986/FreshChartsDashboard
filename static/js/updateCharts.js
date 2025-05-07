@@ -1,4 +1,4 @@
-// Immediate scroll restoration to prevent flash to position 0
+// Immediate scroll restoration to prevent flash to position 0 ONLY ISSUE is start of the selection box
 (function() {
     // Immediately try to set scroll positions before any rendering
     if (localStorage.getItem('savedScrollPosition')) {
@@ -98,6 +98,7 @@ function is350PMTimestamp(value) {
     
     return has350 || has1550 || has350PM;
 }
+
 // Store initial scroll position on page load
 window.addEventListener('DOMContentLoaded', function() {
     console.log("DOM Content Loaded - identifying containers");
@@ -984,6 +985,7 @@ function addRVDropTableStyles() {
         border: 1px solid #ddd;
         border-radius: 4px;
         cursor: pointer;
+        margin-right: 5px;
     }
     
     .reset-zoom-btn:hover {
@@ -994,6 +996,13 @@ function addRVDropTableStyles() {
         display: flex;
         justify-content: flex-end;
         margin: 5px 0;
+        align-items: center;
+    }
+    
+    .zoom-hint {
+        font-size: 11px;
+        color: #666;
+        margin-right: 5px;
     }
 
     /* Make table more responsive */
@@ -1165,18 +1174,24 @@ async function fetchDataAndUpdateCharts() {
     // Save current zoom states for all charts
     for (let chartId in charts) {
         const chart = charts[chartId];
-        if (!chart || !chart.scales || !chart.scales.x) continue;
+        if (!chart || !chart.scales) continue;
         
-        // Store exact min/max values
+        // Store exact min/max values for both x and y axes
         currentZoomState[chartId] = {
-            min: chart.scales.x.min,
-            max: chart.scales.x.max,
+            // X-axis zoom state
+            xMin: chart.scales.x.min,
+            xMax: chart.scales.x.max,
             isViewingLatest: (chart.scales.x.max === undefined || 
                              chart.scales.x.max >= chart.data.labels.length - 1),
             dataLength: chart.data.labels.length,
-            // Store how many points are being shown
             pointsVisible: chart.scales.x.max !== undefined && chart.scales.x.min !== undefined ? 
-                          (chart.scales.x.max - chart.scales.x.min + 1) : chart.data.labels.length
+                          (chart.scales.x.max - chart.scales.x.min + 1) : chart.data.labels.length,
+            
+            // Y-axis zoom state for both y axes
+            y1Min: chart.scales.y1.min,
+            y1Max: chart.scales.y1.max,
+            y2Min: chart.scales.y2.min,
+            y2Max: chart.scales.y2.max
         };
     }
     
@@ -1369,15 +1384,15 @@ async function fetchDataAndUpdateCharts() {
         // Add row numbers to see what's being shown
         n1p3Div.innerHTML = data[sheetName].n1p3.map(row => row.join(' | ')).join('<br>');
         
-		// Add these lines to directly constrain the height:
-		n1p3Div.style.maxHeight = '80px'; // Set your desired height here
-		n1p3Div.style.overflowY = 'auto'; // Add scrollbar when content overflows
-		n1p3Div.style.overflowX = 'auto'; // Add scrollbar when content overflows
-		n1p3Div.style.padding = '3px';
-		n1p3Div.style.fontSize = '14px';
+        // Add these lines to directly constrain the height:
+        n1p3Div.style.maxHeight = '80px'; // Set your desired height here
+        n1p3Div.style.overflowY = 'auto'; // Add scrollbar when content overflows
+        n1p3Div.style.overflowX = 'auto'; // Add scrollbar when content overflows
+        n1p3Div.style.padding = '3px';
+        n1p3Div.style.fontSize = '14px';
 
         // Create RV Drop table early - to be placed next to N1P3 box
-        const rvDropTable = createRVDropTable(chartId, xLabels, y3, y1,y2,data[sheetName].y4);
+        const rvDropTable = createRVDropTable(chartId, xLabels, y3, y1, y2, data[sheetName].y4);
         rvDropTable.style.flex = '1';
         rvDropTable.style.maxWidth = '50%';
         
@@ -1392,12 +1407,16 @@ async function fetchDataAndUpdateCharts() {
         const canvas = document.createElement('canvas');
         chartDiv.appendChild(canvas);
 
-        // Double-click to reset zoom
+        // Double-click to reset zoom (now resets both axes)
         canvas.addEventListener('dblclick', function() {
             if (charts[chartId]) {
-                // Full reset - set both min and max to undefined
+                // Full reset of both X and Y axes
                 charts[chartId].options.scales.x.min = undefined;
                 charts[chartId].options.scales.x.max = undefined;
+                charts[chartId].options.scales.y1.min = paddedMinY;
+                charts[chartId].options.scales.y1.max = paddedMaxY;
+                charts[chartId].options.scales.y2.min = paddedMinY;
+                charts[chartId].options.scales.y2.max = paddedMaxY;
                 charts[chartId].update();
             }
         });
@@ -1445,20 +1464,71 @@ async function fetchDataAndUpdateCharts() {
             }
         });
 
-        // Reset Zoom button
-        const resetBtn = document.createElement('button');
-        resetBtn.className = 'reset-zoom-btn';
-        resetBtn.innerText = 'Reset Zoom';
-        resetBtn.onclick = function() {
+        // Chart controls with zoom info
+        const controlsDiv = document.createElement('div');
+        controlsDiv.className = 'chart-controls';
+        controlsDiv.style.display = 'flex';
+        controlsDiv.style.justifyContent = 'flex-end';
+        controlsDiv.style.alignItems = 'center';
+        controlsDiv.style.margin = '5px 0';
+        
+        // Add zoom hint
+        const zoomHint = document.createElement('span');
+        zoomHint.className = 'zoom-hint';
+        zoomHint.innerHTML = 'CTRL+Wheel to zoom, Shift+Wheel to pan | Double-click to reset';
+        zoomHint.style.fontSize = '11px';
+        zoomHint.style.color = '#666';
+        zoomHint.style.marginRight = '5px';
+        controlsDiv.appendChild(zoomHint);
+        
+        // Reset X button
+        const resetXBtn = document.createElement('button');
+        resetXBtn.className = 'reset-zoom-btn';
+        resetXBtn.innerText = 'Reset X';
+        resetXBtn.onclick = function() {
             if (charts[chartId]) {
-                // Full reset - set both min and max to undefined
                 charts[chartId].options.scales.x.min = undefined;
                 charts[chartId].options.scales.x.max = undefined;
                 charts[chartId].update();
             }
         };
-        chartDiv.appendChild(resetBtn);
-
+        controlsDiv.appendChild(resetXBtn);
+        
+        // Reset Y button
+        const resetYBtn = document.createElement('button');
+        resetYBtn.className = 'reset-zoom-btn';
+        resetYBtn.innerText = 'Reset Y';
+        resetYBtn.onclick = function() {
+            if (charts[chartId]) {
+                charts[chartId].options.scales.y1.min = paddedMinY;
+                charts[chartId].options.scales.y1.max = paddedMaxY;
+                charts[chartId].options.scales.y2.min = paddedMinY;
+                charts[chartId].options.scales.y2.max = paddedMaxY;
+                charts[chartId].update();
+            }
+        };
+        controlsDiv.appendChild(resetYBtn);
+        
+        // Reset All button
+        const resetAllBtn = document.createElement('button');
+        resetAllBtn.className = 'reset-zoom-btn';
+        resetAllBtn.innerText = 'Reset All';
+        resetAllBtn.onclick = function() {
+            if (charts[chartId]) {
+                charts[chartId].options.scales.x.min = undefined;
+                charts[chartId].options.scales.x.max = undefined;
+                charts[chartId].options.scales.y1.min = paddedMinY;
+                charts[chartId].options.scales.y1.max = paddedMaxY;
+                charts[chartId].options.scales.y2.min = paddedMinY;
+                charts[chartId].options.scales.y2.max = paddedMaxY;
+                charts[chartId].update();
+            }
+        };
+        controlsDiv.appendChild(resetAllBtn);
+        
+        // Add controls to chart div
+        chartDiv.appendChild(controlsDiv);
+        
         container.appendChild(chartDiv);
 
         // Chart creation
@@ -1563,7 +1633,7 @@ async function fetchDataAndUpdateCharts() {
                         position: 'left',
                         title: {
                             display: true,
-							text: 'P/L %   |    Stock Move %',
+                            text: 'P/L %   |    Stock Move %',
                             font:{
                                 size: 14,
                                 weight: 'bold'
@@ -1620,29 +1690,42 @@ async function fetchDataAndUpdateCharts() {
                         // This is empty because the plugin is registered at the top of the file
                     },
                     zoom: {
-                        pan: {
-                            enabled: true,
-                            mode: 'x',
-                            modifierKey: null
-                        },
-                        zoom: {
-                            wheel: {
-                                enabled: true,
-                                modifierKey: 'ctrl',
-                            },
-                            pinch: {
-                                enabled: true,
-                                threshold: 0.1, // Increase sensitivity for mobile
-                            },
-                            drag: {
-                                enabled: true,
-                                backgroundColor: 'rgba(0,0,0,0.1)',
-                                borderColor: 'rgba(0,0,0,0.5)',
-                                borderWidth: 1,
-                            },
-                            mode: 'x'
-                        }
-                    },
+        limits: {
+            // Define limits to prevent zooming too far in or out
+            y: {minRange: 0.01},  // Ensure reasonable minimum y-axis range
+            x: {minRange: 0.01}   // Ensure reasonable minimum x-axis range
+        },
+        pan: {
+            enabled: true,
+            mode: 'xy',       // Allow panning in both directions
+            modifierKey: 'shift',  // Only pan when shift key is pressed
+            threshold: 10    // Small threshold to avoid accidental pans
+        },
+        zoom: {
+            wheel: {
+                enabled: true,
+                modifierKey: 'ctrl',
+                speed: 0.1,    // A lower value makes zooming more gradual
+                mode: 'y'      // Wheel only zooms Y axis when ctrl is pressed
+            },
+            pinch: {
+                enabled: true
+            },
+            drag: {
+                enabled: true,
+                backgroundColor: 'rgba(0,0,0,0.1)',
+                borderColor: 'rgba(0,0,0,0.5)',
+                borderWidth: 1,
+                threshold: 10,   // Threshold to prevent accidental drags
+                mode: 'xy'      // Drag zooms both axes
+            },
+            mode: 'xy'    // Default zoom mode affects both axes
+        },
+        // This event handler ensures the chart updates properly after zoom completes
+        onZoomComplete: function({chart}) {
+            chart.update('none');  // Update without animation for better performance
+        }
+    },
                     legend: {
                         position: 'top'
                     },
@@ -1787,24 +1870,39 @@ async function fetchDataAndUpdateCharts() {
                 // Calculate how many new data points were added
                 const newPoints = Math.max(0, newDataLength - oldDataLength);
                 
-                // Only apply zoom state if there was one before and we have new points
-                if (savedState.min !== undefined && savedState.max !== undefined && newPoints > 0) {
-                    // Always show the latest data point (at the new max index)
-                    // but keep the same min point we were looking at before
-                    let newMin = savedState.min;
-                    let newMax = newDataLength - 1; // Always show the last (latest) data point
+                // Only apply zoom state if there was one before
+                if (savedState.xMin !== undefined && savedState.xMax !== undefined) {
+                    if (newPoints > 0) {
+                        // Always show the latest data point (at the new max index)
+                        // but keep the same min point we were looking at before
+                        let newMin = savedState.xMin;
+                        let newMax = newDataLength - 1; // Always show the last (latest) data point
+                        
+                        console.log(`Auto-zooming chart ${chartId}: min=${newMin}, max=${newMax}, added ${newPoints} new points`);
+                        
+                        // Apply the X-axis zoom state
+                        charts[chartId].options.scales.x.min = newMin;
+                        charts[chartId].options.scales.x.max = newMax;
+                    } else {
+                        // If no new points added, restore the exact same view as before
+                        charts[chartId].options.scales.x.min = savedState.xMin;
+                        charts[chartId].options.scales.x.max = savedState.xMax;
+                        
+                        console.log(`Restoring exact X zoom for ${chartId}: min=${savedState.xMin}, max=${savedState.xMax}`);
+                    }
                     
-                    console.log(`Auto-zooming chart ${chartId}: min=${newMin}, max=${newMax}, added ${newPoints} new points`);
+                    // Restore Y-axis zoom state if it exists
+                    if (savedState.y1Min !== undefined && savedState.y1Max !== undefined) {
+                        charts[chartId].options.scales.y1.min = savedState.y1Min;
+                        charts[chartId].options.scales.y1.max = savedState.y1Max;
+                        console.log(`Restoring Y1 zoom for ${chartId}: min=${savedState.y1Min}, max=${savedState.y1Max}`);
+                    }
                     
-                    // Apply the zoom state
-                    charts[chartId].options.scales.x.min = newMin;
-                    charts[chartId].options.scales.x.max = newMax;
-                } else if (savedState.min !== undefined && savedState.max !== undefined) {
-                    // If no new points added, restore the exact same view as before
-                    charts[chartId].options.scales.x.min = savedState.min;
-                    charts[chartId].options.scales.x.max = savedState.max;
-                    
-                    console.log(`Restoring exact zoom for ${chartId}: min=${savedState.min}, max=${savedState.max}, no new points`);
+                    if (savedState.y2Min !== undefined && savedState.y2Max !== undefined) {
+                        charts[chartId].options.scales.y2.min = savedState.y2Min;
+                        charts[chartId].options.scales.y2.max = savedState.y2Max;
+                        console.log(`Restoring Y2 zoom for ${chartId}: min=${savedState.y2Min}, max=${savedState.y2Max}`);
+                    }
                 }
                 
                 // Update the chart with the saved zoom state
@@ -1922,3 +2020,5 @@ function setupAutoRefresh() {
         }, 300000); // Check every 5 minutes (300000ms)
     }
 }
+		
+		
