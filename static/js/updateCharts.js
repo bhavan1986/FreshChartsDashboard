@@ -1163,22 +1163,28 @@ async function fetchDataAndUpdateCharts() {
     addRVDropTableStyles();
     
     // Save current zoom states for all charts
-    for (let chartId in charts) {
-        const chart = charts[chartId];
-        if (!chart || !chart.scales || !chart.scales.x) continue;
-        
-        // Store exact min/max values
-        currentZoomState[chartId] = {
-            min: chart.scales.x.min,
-            max: chart.scales.x.max,
-            isViewingLatest: (chart.scales.x.max === undefined || 
-                             chart.scales.x.max >= chart.data.labels.length - 1),
-            dataLength: chart.data.labels.length,
-            // Store how many points are being shown
-            pointsVisible: chart.scales.x.max !== undefined && chart.scales.x.min !== undefined ? 
-                          (chart.scales.x.max - chart.scales.x.min + 1) : chart.data.labels.length
-        };
-    }
+for (let chartId in charts) {
+    const chart = charts[chartId];
+    if (!chart || !chart.scales || !chart.scales.x) continue;
+    
+    // Store exact min/max values
+    currentZoomState[chartId] = {
+        min: chart.scales.x.min,
+        max: chart.scales.x.max,
+        isViewingLatest: (chart.scales.x.max === undefined || 
+                         chart.scales.x.max >= chart.data.labels.length - 1),
+        dataLength: chart.data.labels.length,
+        // Store how many points are being shown
+        pointsVisible: chart.scales.x.max !== undefined && chart.scales.x.min !== undefined ? 
+                      (chart.scales.x.max - chart.scales.x.min + 1) : chart.data.labels.length,
+        // Save exact min/max values for better restoration
+        exactMin: chart.scales.x.min,
+        exactMax: chart.scales.x.max
+    };
+    
+    // Add better logging
+    console.log(`Saving zoom state for ${chartId}: min=${chart.scales.x.min}, max=${chart.scales.x.max}, dataLength=${chart.data.labels.length}`);
+}
     
     // Remember search value if it exists
     let searchValue = '';
@@ -1779,31 +1785,42 @@ async function fetchDataAndUpdateCharts() {
         }
         
         // Apply zoom state if we have one
-        if (savedState && charts[chartId]) {
-            try {
-                const newDataLength = charts[chartId].data.labels.length;
-                
-                if (savedState.isViewingLatest) {
-                    // If viewing the latest data, adjust the view to show the same number of points
-                    // but shifted to include any new data points
-                    const pointsToShow = savedState.pointsVisible;
-                    const newMin = Math.max(0, newDataLength - pointsToShow);
-                    
-                    charts[chartId].options.scales.x.min = newMin;
-                    charts[chartId].options.scales.x.max = newDataLength - 1;
-                } else {
-                    // Otherwise, maintain the exact same view
-                    charts[chartId].options.scales.x.min = savedState.min;
-                    charts[chartId].options.scales.x.max = savedState.max;
-                }
-                
-                // Update the chart with the saved zoom state
-                charts[chartId].update();
-            } catch (error) {
-                console.error("Error restoring zoom state for " + chartId + ":", error);
+if (savedState && charts[chartId]) {
+    try {
+        const newDataLength = charts[chartId].data.labels.length;
+        const oldDataLength = savedState.dataLength;
+        
+        // Calculate how many new data points were added
+        const newPoints = Math.max(0, newDataLength - oldDataLength);
+        
+        if (savedState.min !== undefined && savedState.max !== undefined) {
+            // Always maintain the same visible data points by keeping the min the same
+            // and only adjusting the max to account for new points
+            let newMin = savedState.min;
+            let newMax = savedState.max;
+            
+            // If we were viewing latest data before refresh
+            if (savedState.isViewingLatest) {
+                // Only extend the max to show new points, but keep min the same
+                newMax = Math.min(newDataLength - 1, savedState.max + newPoints);
+            } else {
+                // If not viewing latest data, maintain the exact same view
+                // without shifting (keep both min and max the same)
             }
+            
+            // Apply the zoom state
+            charts[chartId].options.scales.x.min = newMin;
+            charts[chartId].options.scales.x.max = newMax;
+            
+            console.log(`Restoring zoom for ${chartId}: min=${newMin}, max=${newMax}, added ${newPoints} new points`);
         }
-    } // End of for-loop
+        
+        // Update the chart with the saved zoom state
+        charts[chartId].update();
+    } catch (error) {
+        console.error("Error restoring zoom state for " + chartId + ":", error);
+    }
+}
     
     // Create tooltip div if it doesn't exist
     if (!document.getElementById('chartjs-tooltip')) {
