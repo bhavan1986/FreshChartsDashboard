@@ -1820,7 +1820,7 @@ if (savedState && charts[chartId]) {
     } catch (error) {
         console.error("Error restoring zoom state for " + chartId + ":", error);
     }
-}
+
     
     // Create tooltip div if it doesn't exist
     if (!document.getElementById('chartjs-tooltip')) {
