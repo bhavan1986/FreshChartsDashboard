@@ -1889,13 +1889,14 @@ function setupAutoRefresh() {
             // Check if current time is a weekday (Monday-Friday)
             const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
             
-            // Get minutes for checking if we're past 9:30 AM
+            // Get minutes for checking time boundaries
             const estMinutes = now.getUTCMinutes();
             
-            // Check if current time is between 9:30 AM and 4:00 PM EST
+            // Check if current time is between 9:30 AM and 16:10 (4:10 PM) EST
             const isMarketHours = isWeekday && 
-                                 ((estHours === 9 && estMinutes >= 30) || // 9:30 AM or later
-                                  (estHours > 9 && estHours < 16));       // 10 AM to 3:59 PM
+                                 (((estHours === 9 && estMinutes >= 30) || // 9:30 AM or later
+                                   (estHours > 9 && estHours < 16)) ||     // 10 AM to 3:59 PM
+                                  (estHours === 16 && estMinutes <= 10));  // Up to 4:10 PM
             
             if (isMarketHours) {
                 console.log("Auto-refreshing at:", new Date().toLocaleTimeString());
