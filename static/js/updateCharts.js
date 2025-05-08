@@ -1407,19 +1407,28 @@ async function fetchDataAndUpdateCharts() {
         const canvas = document.createElement('canvas');
         chartDiv.appendChild(canvas);
 
-        // Double-click to reset zoom (now resets both axes)
-        canvas.addEventListener('dblclick', function() {
-            if (charts[chartId]) {
-                // Full reset of both X and Y axes
-                charts[chartId].options.scales.x.min = undefined;
-                charts[chartId].options.scales.x.max = undefined;
-                charts[chartId].options.scales.y1.min = paddedMinY;
-                charts[chartId].options.scales.y1.max = paddedMaxY;
-                charts[chartId].options.scales.y2.min = paddedMinY;
-                charts[chartId].options.scales.y2.max = paddedMaxY;
-                charts[chartId].update();
-            }
-        });
+        // Modify the double-click event listener to check for the shift key
+canvas.addEventListener('dblclick', function(event) {
+    if (charts[chartId]) {
+        if (event.shiftKey) {
+            // Shift+Double-click: Reset only X axis
+            charts[chartId].options.scales.x.min = undefined;
+            charts[chartId].options.scales.x.max = undefined;
+            charts[chartId].update();
+            console.log('Reset X axis only via Shift+Double-click');
+        } else {
+            // Regular Double-click: Reset both X and Y axes
+            charts[chartId].options.scales.x.min = undefined;
+            charts[chartId].options.scales.x.max = undefined;
+            charts[chartId].options.scales.y1.min = paddedMinY;
+            charts[chartId].options.scales.y1.max = paddedMaxY;
+            charts[chartId].options.scales.y2.min = paddedMinY;
+            charts[chartId].options.scales.y2.max = paddedMaxY;
+            charts[chartId].update();
+            console.log('Reset all axes via Double-click');
+        }
+    }
+});
         
         // Add mouseout event to hide vertical line
         canvas.addEventListener('mouseout', function() {
@@ -1475,7 +1484,7 @@ async function fetchDataAndUpdateCharts() {
         // Add zoom hint
         const zoomHint = document.createElement('span');
         zoomHint.className = 'zoom-hint';
-        zoomHint.innerHTML = 'CTRL+Wheel to zoom, Shift+Wheel to pan | Double-click to reset';
+        zoomHint.innerHTML = 'CTRL+Wheel to zoom, Shift+Wheel to pan, Shift+Drag to move Horizontal/Vertical, Drag to Zoom| Shift + Double-click to reset X-axis, Double-click to reset Both Axes';
         zoomHint.style.fontSize = '11px';
         zoomHint.style.color = '#666';
         zoomHint.style.marginRight = '5px';
