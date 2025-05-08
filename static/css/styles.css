@@ -151,6 +151,7 @@ canvas {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: calc(100% - 150px);
+	font-size: 13px;
 }
 
 /* Chart stats in sidebar */
