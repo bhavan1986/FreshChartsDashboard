@@ -13,7 +13,7 @@ body {
 }
 
 .sidebar {
-    width: 350px;
+    width: 400px;
     overflow-y: auto; /* Enable sidebar scroll */
     background-color: #f2f2f2;
     padding: 0; /* Remove padding to prevent unwanted spacing */
