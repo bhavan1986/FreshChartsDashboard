@@ -73,7 +73,7 @@ def is_market_hours():
         
         # Check if within market hours (9:30 AM to 4:00 PM)
         market_open = now.replace(hour=9, minute=30, second=0, microsecond=0)
-        market_close = now.replace(hour=23, minute=5, second=0, microsecond=0)
+        market_close = now.replace(hour=16, minute=5, second=0, microsecond=0)
         
         return market_open <= now <= market_close
     except Exception as e:
