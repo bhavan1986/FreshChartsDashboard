@@ -58,7 +58,7 @@ function identifyScrollableContainers() {
 }
 
 // Helper function to safely check if a timestamp is around 3:50 PM
-function is350PMTimestamp(value) {
+/*function is350PMTimestamp(value) {
     // Handle any possible type safely
     if (value === null || value === undefined) return false;
     
@@ -97,7 +97,50 @@ function is350PMTimestamp(value) {
     }
     
     return has350 || has1550 || has350PM;
+}*/
+
+function is400PMTimestamp(value) {
+    // Handle any possible type safely
+    if (value === null || value === undefined) return false;
+    
+    // Try to convert to string safely
+    let str = "";
+    try {
+        // Try different approaches to get a string
+        if (typeof value === "string") {
+            str = value;
+        } else if (typeof value.toString === "function") {
+            str = value.toString();
+        } else {
+            str = "" + value; // Force string conversion
+        }
+    } catch (e) {
+        console.log("Error converting timestamp to string:", e);
+        return false;
+    }
+    
+    // Check for "4:00" or "16:00" with more precision to avoid matching "14:00" or "1:00"
+    // This looks for either "4:00" preceded by a non-digit (to avoid "14:00") 
+    // or "16:00" specifically for 24-hour format
+    
+    // Check for "4:00" not preceded by a digit (to avoid "14:00", "24:00", etc)
+    const has400 = /[^0-9]4:00/.test(" " + str); // Add space to handle case where "4:00" is at the start
+    
+    // Check for "16:00" in 24-hour format
+    const has1600 = str.indexOf("16:00") >= 0;
+    
+    // Check for "4:00 PM" explicitly (most reliable indicator)
+    const has400PM = str.indexOf("4:00 PM") >= 0 || str.indexOf("4:00PM") >= 0;
+    
+    // Debug logging to see what's being detected
+    if (has400 || has1600 || has400PM) {
+        console.log("Found 4:00 PM timestamp:", str);
+    }
+    
+    return has400 || has1600 || has400PM;
 }
+
+
 
 // Store initial scroll position on page load
 window.addEventListener('DOMContentLoaded', function() {
@@ -465,7 +508,8 @@ function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, time
                     dateGroups[date].rvPoints.push({
                         index: idx,
                         timestamp: timestamp,
-                        is350: is350PMTimestamp(timestamp),
+                        //is350: is350PMTimestamp(timestamp),
+						is400: is400PMTimestamp(timestamp),
                         value: rvData[idx]
                     });
                     
@@ -474,7 +518,8 @@ function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, time
                         dateGroups[date].plPoints.push({
                             index: idx,
                             timestamp: timestamp,
-                            is350: is350PMTimestamp(timestamp),
+                            //is350: is350PMTimestamp(timestamp),
+							is400: is400PMTimestamp(timestamp),
                             value: plData[idx]
                         });
                     }
@@ -484,7 +529,8 @@ function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, time
                         dateGroups[date].stockMovePoints.push({
                             index: idx,
                             timestamp: timestamp,
-                            is350: is350PMTimestamp(timestamp),
+                            //is350: is350PMTimestamp(timestamp),
+							is400: is400PMTimestamp(timestamp),
                             value: stockMoveData[idx]
                         });
                     }
@@ -508,23 +554,27 @@ function createRVDropTable(chartId, xLabels, rvData, plData, stockMoveData, time
                 const dataPointsForLatestDate = dateGroups[latestDate].rvPoints;
                 
                 // Check if there's a 3:50 PM value for this date
-                let found350 = false;
+                //let found350 = false;
+				let found400 = false;
                 
                 for (const dataPoint of dataPointsForLatestDate) {
-                    if (dataPoint.is350 && 
+                    if (dataPoint.is400 && 
+					//if (dataPoint.is350 &&
                         dataPoint.value !== null && 
                         dataPoint.value !== undefined && 
                         !isNaN(dataPoint.value)) {
                         // Found a valid 3:50 PM value
                         rvTargetValue = dataPoint.value;
                         rvTargetTime = dataPoint.timestamp;
-                        found350 = true;
+                        found400 = true;
+						//found350 = true;
                         break;
                     }
                 }
                 
                 // If no 3:50 PM value, use the latest valid value for this date
-                if (!found350) {
+                //if (!found350) {
+				if (!found400) {
                     // Sort data points by timestamp in descending order (latest first)
                     const sortedPoints = [...dataPointsForLatestDate].sort((a, b) => {
                         // Simple string comparison should work for most timestamp formats
