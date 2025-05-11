@@ -68,7 +68,7 @@ def is_market_hours():
         now = datetime.datetime.now(est)
         
         # Check if it's a weekday (Monday = 0, Sunday = 6)
-        if now.weekday() >= 7:  # Saturday or Sunday
+        if now.weekday() >= 5:  # Saturday or Sunday
             return False
         
         # Check if within market hours (9:30 AM to 4:00 PM)
