@@ -23,7 +23,7 @@ def load_excel_data():
     chart_data = {}
 
     for sheet_name in xl.sheet_names:
-        df = xl.parse(sheet_name)
+        df = xl.parse(sheet_name, header=None)
 
         if df.shape[1] >= 5:
             x = df.iloc[:, 0].tolist()
