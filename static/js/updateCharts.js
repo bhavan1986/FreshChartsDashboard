@@ -1921,55 +1921,103 @@ canvas.addEventListener('dblclick', function(event) {
         }
         
         // Apply zoom state if we have one
-        if (savedState && charts[chartId]) {
-            try {
-                const newDataLength = charts[chartId].data.labels.length;
-                const oldDataLength = savedState.dataLength;
+// Apply zoom state if we have one
+if (savedState && charts[chartId]) {
+    try {
+        const newDataLength = charts[chartId].data.labels.length;
+        const oldDataLength = savedState.dataLength;
+        
+        // Calculate how many new data points were added
+        const newPoints = Math.max(0, newDataLength - oldDataLength);
+        
+        // Only apply zoom state if there was one before
+        if (savedState.xMin !== undefined && savedState.xMax !== undefined) {
+            if (newPoints > 0) {
+                // Always show the latest data point (at the new max index)
+                // but keep the same min point we were looking at before
+                let newMin = savedState.xMin;
+                let newMax = newDataLength - 1; // Always show the last (latest) data point
                 
-                // Calculate how many new data points were added
-                const newPoints = Math.max(0, newDataLength - oldDataLength);
+                console.log(`Auto-zooming chart ${chartId}: min=${newMin}, max=${newMax}, added ${newPoints} new points`);
                 
-                // Only apply zoom state if there was one before
-                if (savedState.xMin !== undefined && savedState.xMax !== undefined) {
-                    if (newPoints > 0) {
-                        // Always show the latest data point (at the new max index)
-                        // but keep the same min point we were looking at before
-                        let newMin = savedState.xMin;
-                        let newMax = newDataLength - 1; // Always show the last (latest) data point
-                        
-                        console.log(`Auto-zooming chart ${chartId}: min=${newMin}, max=${newMax}, added ${newPoints} new points`);
-                        
-                        // Apply the X-axis zoom state
-                        charts[chartId].options.scales.x.min = newMin;
-                        charts[chartId].options.scales.x.max = newMax;
-                    } else {
-                        // If no new points added, restore the exact same view as before
-                        charts[chartId].options.scales.x.min = savedState.xMin;
-                        charts[chartId].options.scales.x.max = savedState.xMax;
-                        
-                        console.log(`Restoring exact X zoom for ${chartId}: min=${savedState.xMin}, max=${savedState.xMax}`);
+                // Apply the X-axis zoom state
+                charts[chartId].options.scales.x.min = newMin;
+                charts[chartId].options.scales.x.max = newMax;
+                
+                // Check if the newest data points fall outside the current Y-axis range
+                // and adjust if necessary
+                if (savedState.y1Min !== undefined && savedState.y1Max !== undefined) {
+                    // Get current shared y-axis limits (both axes use the same scale)
+                    let yMin = Math.min(savedState.y1Min, savedState.y2Min);
+                    let yMax = Math.max(savedState.y1Max, savedState.y2Max);
+                    let needsAdjustment = false;
+                    
+                    // Check each new data point to see if it's outside current range
+                    for (let i = oldDataLength; i < newDataLength; i++) {
+                        // Check all datasets (index 0, 1, and 2)
+                        for (let datasetIndex = 0; datasetIndex < charts[chartId].data.datasets.length; datasetIndex++) {
+                            const value = charts[chartId].data.datasets[datasetIndex].data[i];
+                            if (value !== null && value !== undefined && !isNaN(value)) {
+                                // Check if value is outside the current range
+                                if (value < yMin || value > yMax) {
+                                    needsAdjustment = true;
+                                    
+                                    // Add a small padding (5% of the range) for better visibility
+                                    const padding = (yMax - yMin) * 0.05;
+                                    
+                                    if (value < yMin) {
+                                        yMin = Math.min(yMin, value - padding);
+                                    }
+                                    if (value > yMax) {
+                                        yMax = Math.max(yMax, value + padding);
+                                    }
+                                }
+                            }
+                        }
                     }
                     
-                    // Restore Y-axis zoom state if it exists
-                    if (savedState.y1Min !== undefined && savedState.y1Max !== undefined) {
+                    // Apply adjusted Y-axis settings to both axes
+                    if (needsAdjustment) {
+                        charts[chartId].options.scales.y1.min = yMin;
+                        charts[chartId].options.scales.y1.max = yMax;
+                        charts[chartId].options.scales.y2.min = yMin;
+                        charts[chartId].options.scales.y2.max = yMax;
+                        
+                        console.log(`Adjusted both Y scales for new data points: (${yMin}, ${yMax})`);
+                    } else {
+                        // If no adjustment needed, keep the previous values
                         charts[chartId].options.scales.y1.min = savedState.y1Min;
                         charts[chartId].options.scales.y1.max = savedState.y1Max;
-                        console.log(`Restoring Y1 zoom for ${chartId}: min=${savedState.y1Min}, max=${savedState.y1Max}`);
-                    }
-                    
-                    if (savedState.y2Min !== undefined && savedState.y2Max !== undefined) {
                         charts[chartId].options.scales.y2.min = savedState.y2Min;
                         charts[chartId].options.scales.y2.max = savedState.y2Max;
-                        console.log(`Restoring Y2 zoom for ${chartId}: min=${savedState.y2Min}, max=${savedState.y2Max}`);
+                        
+                        console.log(`No Y-axis adjustment needed for new data points`);
                     }
                 }
+            } else {
+                // If no new points added, restore the exact same view as before
+                charts[chartId].options.scales.x.min = savedState.xMin;
+                charts[chartId].options.scales.x.max = savedState.xMax;
                 
-                // Update the chart with the saved zoom state
-                charts[chartId].update();
-            } catch (error) {
-                console.error("Error restoring zoom state for " + chartId + ":", error);
+                console.log(`Restoring exact X zoom for ${chartId}: min=${savedState.xMin}, max=${savedState.xMax}`);
+                
+                // Restore Y-axis zoom state if it exists
+                if (savedState.y1Min !== undefined && savedState.y1Max !== undefined) {
+                    charts[chartId].options.scales.y1.min = savedState.y1Min;
+                    charts[chartId].options.scales.y1.max = savedState.y1Max;
+                    charts[chartId].options.scales.y2.min = savedState.y2Min;
+                    charts[chartId].options.scales.y2.max = savedState.y2Max;
+                    console.log(`Restoring Y axes zoom for ${chartId}`);
+                }
             }
         }
+        
+        // Update the chart with the saved zoom state
+        charts[chartId].update();
+    } catch (error) {
+        console.error("Error restoring zoom state for " + chartId + ":", error);
+    }
+}
     } // End of for-loop for chart creation
     
     // Create tooltip div if it doesn't exist
