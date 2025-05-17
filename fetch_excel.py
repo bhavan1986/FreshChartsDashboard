@@ -20,8 +20,10 @@ CLIENT_SECRET = os.environ["CLIENT_SECRET"]
 
 # Your Microsoft Graph User ID
 USER_ID = "542ea7de-925a-40e9-ba86-07c7e82b8336"
-EXCEL_FILE_PATH = "/Trades_Charts.xlsm"
-LOCAL_SAVE_PATH = "/data/Trades_Charts.xlsm"  # Shared disk location
+#EXCEL_FILE_PATH = "/Trades_Charts.xlsm"
+#LOCAL_SAVE_PATH = "/data/Trades_Charts.xlsm"  # Shared disk location
+EXCEL_FILE_PATH = "/Trades_Charts_AWS_VM.xlsm"
+LOCAL_SAVE_PATH = "/data/Trades_Charts_AWS_VM.xlsm"  # Shared disk location
 
 # Function to get access token from Microsoft Graph API
 def get_access_token():
