@@ -2085,7 +2085,7 @@ function setupAutoRefresh() {
     // Only set up a new timer if one isn't already running
     if (!refreshTimer) {
         // Log when the next refresh attempt will be
-        const nextRefreshTime = new Date(Date.now() + 300000); // 5 minutes from now
+        const nextRefreshTime = new Date(Date.now() + 240000); // 4 minutes from now
         console.log("Next refresh attempt will be at:", nextRefreshTime.toLocaleTimeString());
         
         // Check every 5 minutes if we should refresh the data
@@ -2111,20 +2111,20 @@ function setupAutoRefresh() {
             const isMarketHours = isWeekday && 
                                  (((estHours === 9 && estMinutes >= 30) || // 9:30 AM or later
                                    (estHours > 9 && estHours < 16)) ||     // 10 AM to 3:59 PM
-                                  (estHours === 23 && estMinutes <= 10));  // Up to 4:10 PM
+                                  (estHours === 16 && estMinutes <= 10));  // Up to 4:10 PM
             
             if (isMarketHours) {
                 console.log("Auto-refreshing at:", new Date().toLocaleTimeString());
                 fetchDataAndUpdateCharts();
             } else {
                 console.log("Outside market hours, skipping refresh at:", new Date().toLocaleTimeString());
-                fetchDataAndUpdateCharts(); // Always refresh for testing purposes
+                //fetchDataAndUpdateCharts(); // Always refresh for testing purposes
             }
             
             // Log when the next refresh attempt will be
-            const nextRefreshTime = new Date(Date.now() + 300000); // 5 minutes from now
+            const nextRefreshTime = new Date(Date.now() + 240000); // 4 minutes from now
             console.log("Next refresh attempt will be at:", nextRefreshTime.toLocaleTimeString());
-        }, 15000); // Check every 5 minutes (300000ms)
+        }, 240000); // Check every 5 minutes (300000ms)
     }
 }
 		

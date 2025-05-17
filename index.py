@@ -8,7 +8,8 @@ import datetime
 app = Flask(__name__)
 
 def load_excel_data():
-    file_path = "/data/Trades_Charts.xlsm"
+    #file_path = "/data/Trades_Charts.xlsm"
+    file_path = "/data/Trades_Charts_AWS_VM.xlsm"
     
     print("Looking for file at:", file_path)
     print("Directory listing:", os.listdir("/data"))
@@ -72,7 +73,8 @@ def data():
 @app.route('/get-runlog-timestamp')
 def get_runlog_timestamp():
     try:
-        file_path = "/data/Trades_Charts.xlsm"
+        #file_path = "/data/Trades_Charts.xlsm"
+        file_path = "/data/Trades_Charts_AWS_VM.xlsm"
         
         if not os.path.exists(file_path):
             print(f"❌ Excel file not found at {file_path}")
