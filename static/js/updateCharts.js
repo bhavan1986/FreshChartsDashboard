@@ -2111,14 +2111,14 @@ function setupAutoRefresh() {
             const isMarketHours = isWeekday && 
                                  (((estHours === 9 && estMinutes >= 30) || // 9:30 AM or later
                                    (estHours > 9 && estHours < 16)) ||     // 10 AM to 3:59 PM
-                                  (estHours === 23 && estMinutes <= 50));  // Up to 4:10 PM
+                                  (estHours === 16 && estMinutes <= 10));  // Up to 4:10 PM
             
             if (isMarketHours) {
                 console.log("Auto-refreshing at:", new Date().toLocaleTimeString());
                 fetchDataAndUpdateCharts();
             } else {
                 console.log("Outside market hours, skipping refresh at:", new Date().toLocaleTimeString());
-                fetchDataAndUpdateCharts(); // Always refresh for testing purposes
+                //fetchDataAndUpdateCharts(); // Always refresh for testing purposes
             }
             
             // Log when the next refresh attempt will be
